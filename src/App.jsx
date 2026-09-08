@@ -4636,6 +4636,27 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
     alert(`Jadwal harian (Masuk & Pulang) untuk ${selectedGuruJadwal.nama} berhasil disimpan!`);
   };
 
+  // FUNGSI BARU: TERAPKAN JAM DEFAULT MASSAL (06.45 - 14.00) UNTUK SEMUA GURU
+  const handleTerapkanDefaultSemuaGuru = () => {
+    if (window.confirm('Apakah Anda yakin ingin menerapkan jadwal default (Masuk: 06.45, Pulang: 14.00, Senin-Jumat) ke SEMUA guru secara serentak?')) {
+      const defaultJadwalMasal = {
+        Senin: { aktif: true, jamMulai: '06:45', jamSelesai: '14:00' },
+        Selasa: { aktif: true, jamMulai: '06:45', jamSelesai: '14:00' },
+        Rabu: { aktif: true, jamMulai: '06:45', jamSelesai: '14:00' },
+        Kamis: { aktif: true, jamMulai: '06:45', jamSelesai: '14:00' },
+        Jumat: { aktif: true, jamMulai: '06:45', jamSelesai: '14:00' },
+      };
+
+      const updatedGuruList = dataGuru.map(g => ({
+        ...g,
+        jadwalMengajar: defaultJadwalMasal
+      }));
+
+      setDataGuru(updatedGuruList);
+      alert('Berhasil! Seluruh jadwal guru telah diset serentak ke jam 06.45 - 14.00.');
+    }
+  };
+
   const sortedDataGuru = dataGuru ? [...dataGuru].sort((a, b) => a.nama.localeCompare(b.nama)) : [];
 
   return (
@@ -4751,9 +4772,20 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
       {/* KONTEN 2: PENGATURAN JADWAL MENGAJAR GURU (TERURUT ABJAD A-Z) */}
       {subTab === 'guru' && (
         <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100 text-gray-800'} p-6 rounded-xl shadow-sm border space-y-4`}>
-          <div>
-            <h3 className="text-xl font-bold flex items-center gap-2"><Calendar className="text-purple-600"/> Jadwal Mengajar Harian Guru (Masuk & Pulang)</h3>
-            <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Atur jam mulai dan jam selesai mengajar harian (Senin - Jumat) untuk masing-masing guru.</p>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h3 className="text-xl font-bold flex items-center gap-2"><Calendar className="text-purple-600"/> Jadwal Mengajar Harian Guru (Masuk & Pulang)</h3>
+              <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Atur jam mulai dan jam selesai mengajar harian (Senin - Jumat) untuk masing-masing guru.</p>
+            </div>
+            
+            {/* TOMBOL AKSI MASSAL DEFAULT 06.45 - 14.00 */}
+            <button 
+              onClick={handleTerapkanDefaultSemuaGuru}
+              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold cursor-pointer shadow transition flex items-center gap-2 whitespace-nowrap"
+              title="Set semua guru masuk 06.45 dan pulang 14.00 (Senin - Jumat)"
+            >
+              ⚡ Set Default Semua Guru (06.45 - 14.00)
+            </button>
           </div>
 
           <div className={`border rounded-xl overflow-hidden ${isDarkMode ? 'border-slate-800' : 'border-gray-200'}`}>
@@ -5116,7 +5148,12 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
   const [selectedSiswaId, setSelectedSiswaId] = useState(siswaFiltered[0]?.id || '');
   const [showRaporModal, setShowRaporModal] = useState(false);
 
-  const currentLogKehadiran = logKehadiran.filter(l => l.tahunPelajaran === tahunPelajaranAktif);
+  // MENGGABUNGKAN LOG HARIAN AKTIF DAN SELURUH DATA DARI ARSIRP TUTUP BUKU
+  const allArsippedLogs = arsipAbsensi ? arsipAbsensi.flatMap(arsip => arsip.data || []) : [];
+  const rawMasterLog = [...logKehadiran, ...allArsippedLogs];
+  const uniqueMasterLog = Array.from(new Map(rawMasterLog.map(item => [item.id, item])).values());
+
+  const currentLogKehadiran = uniqueMasterLog.filter(l => l.tahunPelajaran === tahunPelajaranAktif);
   const currentPelanggaran = dataPelanggaran.filter(p => p.tahunPelajaran === tahunPelajaranAktif);
 
   const handleKelasChange = (kelasBaru) => {
@@ -5138,7 +5175,6 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
     const jumlahHari = new Date(tTarget, bTarget + 1, 0).getDate(); 
     const namaHariArr = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
-    // Header Tabel: Siswa hanya standar, Guru ditambahkan kolom 'Luar Jadwal'
     const rowHeader1 = isSiswa ? [
       'No', 'Nama Siswa', 'Kelas', 'Hadir', 'Tepat Waktu', 'Telat', 'Sakit', 'Izin', 'Alpa'
     ] : [
@@ -5188,7 +5224,6 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
         else if (l.status === 'Alpa') alpa++;
       });
 
-      // Total Hadir adalah gabungan Tepat Waktu + Telat + Luar Jadwal
       const totalHadirWarga = isSiswa ? (tepatWaktu + telat) : (tepatWaktu + telat + luarJadwal);
 
       const rowData = isSiswa ? [
