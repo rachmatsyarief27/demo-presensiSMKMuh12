@@ -4,6 +4,8 @@ import {
   BookOpen, CreditCard, School, ArrowLeft, Plus, X, CheckCircle, Pencil, Trash2, Download, ShieldCheck, Printer, Tv, Eye, AlertTriangle, Archive, FileText, Lock, LogOut, User, Calendar, TrendingUp, PieChart, FileCheck, QrCode, Sun, Moon, Camera, Layers, ArrowUpRight, UserCheck, UserX, RefreshCw, Upload, Volume2 
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+// --- TAMBAHAN IMPORT SUPABASE ---
+import { supabase } from './supabaseClient';
 
 export default function DashboardKehadiran() {
   const [adminCredential, setAdminCredential] = useState(() => {
@@ -23,7 +25,7 @@ export default function DashboardKehadiran() {
   const [activeMenu, setActiveMenu] = useState('absen-sekolah'); 
 
   // State Pengaturan Audio Kustom dengan localStorage
- const [pengaturanAudio, setPengaturanAudio] = useState(() => {
+  const [pengaturanAudio, setPengaturanAudio] = useState(() => {
     const saved = localStorage.getItem('pengaturanAudio');
     return saved ? JSON.parse(saved) : { aktif: true, berhasil: '', pulang: '', terlambat: '', tidakDikenal: '' };
   });
@@ -57,7 +59,7 @@ export default function DashboardKehadiran() {
   const [tempPhotoInput, setTempPhotoInput] = useState(adminPhoto);
 
   // ================= STATE DENGAN LOCAL STORAGE =================
-const [dataGuru, setDataGuru] = useState(() => {
+  const [dataGuru, setDataGuru] = useState(() => {
     const saved = localStorage.getItem('dataGuru');
     return saved ? JSON.parse(saved) : [];
   });
@@ -78,12 +80,13 @@ const [dataGuru, setDataGuru] = useState(() => {
       { id: 6, hari: 'Sabtu', petugas1: 'Belum diatur', petugas2: 'Belum diatur' }
     ];
   });
+
   const [pengaturanJam, setPengaturanJam] = useState(() => {
     const saved = localStorage.getItem('pengaturanJam');
     return saved ? JSON.parse(saved) : {
       modeAktif: 'Pagi', 
       pagi: { jamMasuk: '07:00', ambangTerlambat: '07:15', jamPulang: '13:00' },
-      siang: { jamMasuk: '13:30', ambangTerlambat: '13:45', jamPulang: '18:00' },
+      siang: { jamMasuk: '13:00', ambangTerlambat: '13:15', jamPulang: '17:30' },
       fullDay: { jamMasuk: '07:00', ambangTerlambat: '07:15', jamPulang: '15:30' }
     };
   });
@@ -135,6 +138,20 @@ const [dataGuru, setDataGuru] = useState(() => {
     localStorage.setItem('dataPerizinan', JSON.stringify(dataPerizinan));
     localStorage.setItem('arsipAbsensi', JSON.stringify(arsipAbsensi));
   }, [adminCredential, isAdminLoggedIn, isDarkMode, adminPhoto, tahunPelajaranAktif, daftarTahunPelajaran, dataGuru, dataSiswa, jadwalPiket, pengaturanJam, infoSekolah, logKehadiran, dataPelanggaran, dataPerizinan, arsipAbsensi]);
+
+  // ================= KODE PENGHUBUNG SUPABASE (BARIS 138) =================
+  useEffect(() => {
+    const ambilDataDariSupabase = async () => {
+      const { data: guruData } = await supabase.from('guru').select('*');
+      if (guruData && guruData.length > 0) setDataGuru(guruData);
+
+      const { data: siswaData } = await supabase.from('siswa').select('*');
+      if (siswaData && siswaData.length > 0) setDataSiswa(siswaData);
+    };
+
+    ambilDataDariSupabase();
+  }, []);
+  // =======================================================================
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -5889,7 +5906,6 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
   const [activeTab, setActiveTab] = useState('siswa');
   const [searchQuery, setSearchQuery] = useState('');
   
-  // State untuk Master Kelas & Kejuruan
   const [daftarMasterKelas, setDaftarMasterKelas] = useState(() => {
     const saved = localStorage.getItem('daftarMasterKelas');
     return saved ? JSON.parse(saved) : [];
@@ -5910,7 +5926,6 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
   const [modalMode, setModalMode] = useState('add'); 
   const [editingId, setEditingId] = useState(null);
   
-  // TAMBAHAN: Field kodeGuru di dalam formData
   const [formData, setFormData] = useState({ 
     nama: '', 
     nisn: '', 
@@ -6018,17 +6033,35 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id) => {
+  // FUNGSI HAPUS DENGAN SUPABASE
+  const handleDelete = async (id) => {
     if (window.confirm('Hapus data ini?')) {
+      const targetTable = activeTab === 'guru' ? 'guru' : 'siswa';
+      const { error } = await supabase.from(targetTable).delete().eq('id', id);
+
+      if (error) {
+        alert('Gagal menghapus data dari Supabase: ' + error.message);
+        return;
+      }
+
       if (activeTab === 'guru') setDataGuru(dataGuru.filter(item => item.id !== id));
       else setDataSiswa(dataSiswa.filter(item => item.id !== id));
       setSelectedIds(selectedIds.filter(itemId => itemId !== id));
     }
   };
 
-  const handleBulkDelete = () => {
+  // FUNGSI HAPUS MASAL DENGAN SUPABASE
+  const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return;
     if (window.confirm(`Apakah Anda yakin ingin menghapus ${selectedIds.length} data yang dipilih?`)) {
+      const targetTable = activeTab === 'guru' ? 'guru' : 'siswa';
+      const { error } = await supabase.from(targetTable).delete().in('id', selectedIds);
+
+      if (error) {
+        alert('Gagal menghapus data massal dari Supabase: ' + error.message);
+        return;
+      }
+
       if (activeTab === 'guru') {
         setDataGuru(dataGuru.filter(item => !selectedIds.includes(item.id)));
       } else {
@@ -6079,8 +6112,8 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
     }
   };
 
-  // FUNGSI SIMPAN DATA DENGAN KODE GURU & AUTO-RFID
-  const handleSaveData = (e) => {
+  // FUNGSI SIMPAN DATA KE SUPABASE (ADD & EDIT)
+  const handleSaveData = async (e) => {
     e.preventDefault();
     const defaultAvatar = getAvatarUrl(formData.nama);
     const finalFoto = (formData.foto && formData.foto.startsWith('data:image')) ? formData.foto : defaultAvatar;
@@ -6092,9 +6125,25 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
       const finalRfid = cleanRfidInput && cleanRfidInput !== 'RFID' ? cleanRfidInput : `KODE-${finalKodeGuru}`;
 
       if (modalMode === 'add') {
-        setDataGuru([{ ...formData, kodeGuru: finalKodeGuru, rfid: finalRfid, foto: finalFoto, id: Date.now() }, ...dataGuru]);
+        const newData = { nama: formData.nama, kodeGuru: finalKodeGuru, jabatan_kelas: formData.jabatan_kelas, rfid: finalRfid, foto: finalFoto };
+        const { data, error } = await supabase.from('guru').insert([newData]).select();
+        
+        if (error) {
+          alert('Gagal menyimpan ke Supabase: ' + error.message);
+          return;
+        }
+        if (data && data.length > 0) {
+          setDataGuru([data[0], ...dataGuru]);
+        }
       } else {
-        setDataGuru(dataGuru.map(item => item.id === editingId ? { ...item, ...formData, kodeGuru: finalKodeGuru, rfid: finalRfid, foto: finalFoto } : item));
+        const updatedData = { nama: formData.nama, kodeGuru: finalKodeGuru, jabatan_kelas: formData.jabatan_kelas, rfid: finalRfid, foto: finalFoto };
+        const { error } = await supabase.from('guru').update(updatedData).eq('id', editingId);
+        
+        if (error) {
+          alert('Gagal memperbarui di Supabase: ' + error.message);
+          return;
+        }
+        setDataGuru(dataGuru.map(item => item.id === editingId ? { ...item, ...updatedData } : item));
       }
     } else {
       const finalRfid = cleanRfidInput && cleanRfidInput !== 'RFID' ? cleanRfidInput : (formData.nisn ? `NISN-${formData.nisn.trim()}` : `ID-${Date.now()}`);
@@ -6105,7 +6154,6 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
         const initialStatusTP = { [tahunPelajaranAktif]: 'Aktif' };
 
         const newSiswa = {
-          id: Date.now(),
           nama: formData.nama,
           nisn: formData.nisn ? formData.nisn.trim() : '',
           rfid: finalRfid,
@@ -6113,27 +6161,38 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
           kelasPerTP: initialKelasPerTP,
           statusTP: initialStatusTP
         };
-        setDataSiswa([newSiswa, ...dataSiswa]);
-      } else {
-        setDataSiswa(dataSiswa.map(item => {
-          if (item.id === editingId) {
-            const updatedKelasPerTP = { ...(item.kelasPerTP || {}) };
-            updatedKelasPerTP[tahunPelajaranAktif] = cleanKelasForm;
-            const updatedStatusTP = { ...(item.statusTP || {}) };
-            if (!updatedStatusTP[tahunPelajaranAktif]) updatedStatusTP[tahunPelajaranAktif] = 'Aktif';
 
-            return {
-              ...item,
-              nama: formData.nama,
-              nisn: formData.nisn ? formData.nisn.trim() : '',
-              rfid: finalRfid,
-              foto: finalFoto,
-              kelasPerTP: updatedKelasPerTP,
-              statusTP: updatedStatusTP
-            };
-          }
-          return item;
-        }));
+        const { data, error } = await supabase.from('siswa').insert([newSiswa]).select();
+        if (error) {
+          alert('Gagal menyimpan ke Supabase: ' + error.message);
+          return;
+        }
+        if (data && data.length > 0) {
+          setDataSiswa([data[0], ...dataSiswa]);
+        }
+      } else {
+        const targetSiswa = dataSiswa.find(item => item.id === editingId);
+        const updatedKelasPerTP = { ...(targetSiswa?.kelasPerTP || {}) };
+        updatedKelasPerTP[tahunPelajaranAktif] = cleanKelasForm;
+        const updatedStatusTP = { ...(targetSiswa?.statusTP || {}) };
+        if (!updatedStatusTP[tahunPelajaranAktif]) updatedStatusTP[tahunPelajaranAktif] = 'Aktif';
+
+        const updatedData = {
+          nama: formData.nama,
+          nisn: formData.nisn ? formData.nisn.trim() : '',
+          rfid: finalRfid,
+          foto: finalFoto,
+          kelasPerTP: updatedKelasPerTP,
+          statusTP: updatedStatusTP
+        };
+
+        const { error } = await supabase.from('siswa').update(updatedData).eq('id', editingId);
+        if (error) {
+          alert('Gagal memperbarui di Supabase: ' + error.message);
+          return;
+        }
+
+        setDataSiswa(dataSiswa.map(item => item.id === editingId ? { ...item, ...updatedData } : item));
       }
     }
     setIsModalOpen(false);
@@ -6159,7 +6218,7 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       let text = event.target.result;
       text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
       const lines = text.split('\n').map(l => l.trim()).filter(l => l);
@@ -6181,24 +6240,27 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
           if (cols.length >= 5) {
             const [nama, nisn, rawKelas, keahlian, rfid] = cols;
             const kelas = rawKelas ? rawKelas.trim().toUpperCase() : '';
-            const newId = Date.now() + i;
             
             if (kelas && !newMasterClasses.some(k => k.nama.trim().toUpperCase() === kelas)) {
               newMasterClasses.push({ nama: kelas, keahlian: keahlian || 'Konsentrasi Umum' });
             }
 
             const autoFoto = getAvatarUrl(nama);
-            const generatedRfid = (rfid && rfid !== 'RFID') ? rfid.toUpperCase() : (nisn ? `NISN-${nisn}` : `ID-${newId}`);
+            const generatedRfid = (rfid && rfid !== 'RFID') ? rfid.toUpperCase() : (nisn ? `NISN-${nisn}` : `ID-${Date.now() + i}`);
 
-            newSiswaList.unshift({
-              id: newId,
+            const payloadSiswa = {
               nama,
               nisn: nisn || '',
               rfid: generatedRfid,
               foto: autoFoto,
               kelasPerTP: { [tahunPelajaranAktif]: kelas },
               statusTP: { [tahunPelajaranAktif]: 'Aktif' }
-            });
+            };
+
+            const { data } = await supabase.from('siswa').insert([payloadSiswa]).select();
+            if (data && data.length > 0) {
+              newSiswaList.unshift(data[0]);
+            }
             importedCount++;
           }
         }
@@ -6229,26 +6291,29 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
 
           if (cols.length >= 4) {
             const [nama, kodeGuru, jabatan, rfid] = cols;
-            const newId = Date.now() + i;
             const autoFoto = getAvatarUrl(nama || 'Guru');
-            const finalKodeGuru = kodeGuru || `GURU-${newId}`;
+            const finalKodeGuru = kodeGuru || `GURU-${Date.now()}`;
             const finalRfid = (rfid && rfid !== 'RFID') ? rfid.toUpperCase() : `KODE-${finalKodeGuru}`;
 
-            newGuruList.unshift({
-              id: newId,
+            const payloadGuru = {
               nama: nama || 'Tanpa Nama',
               kodeGuru: finalKodeGuru,
               jabatan_kelas: jabatan || 'Guru',
               rfid: finalRfid,
               foto: autoFoto
-            });
+            };
+
+            const { data } = await supabase.from('guru').insert([payloadGuru]).select();
+            if (data && data.length > 0) {
+              newGuruList.unshift(data[0]);
+            }
             importedCount++;
           }
         }
         setDataGuru(newGuruList);
       }
 
-      alert(`Berhasil mengimpor ${importedCount} data secara massal!`);
+      alert(`Berhasil mengimpor ${importedCount} data ke Supabase!`);
       e.target.value = null;
     };
     reader.readAsText(file);
@@ -6498,7 +6563,7 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
         </div>
       )}
 
-      {/* MODAL TAMBAH / EDIT DATA SISWA & GURU (DENGAN KODE GURU) */}
+      {/* MODAL TAMBAH / EDIT DATA SISWA & GURU */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
           <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white text-gray-800'} w-full max-w-md rounded-2xl shadow-xl overflow-hidden`}>
