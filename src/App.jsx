@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Menu, Search, BarChart2, Users, Clock, Settings, 
-  BookOpen, CreditCard, School, ArrowLeft, Plus, X, CheckCircle, Pencil, Trash2, Download, ShieldCheck, Printer, Tv, Eye, AlertTriangle, Archive, FileText, Lock, LogOut, User, Calendar, TrendingUp, PieChart, FileCheck, QrCode, Sun, Moon, Camera, Layers, ArrowUpRight, UserCheck, UserX, RefreshCw, Upload, Volume2 
+  Menu, MenuItem, Search, BarChart2, Users, Clock, Settings,
+  BookOpen, CreditCard, School, ArrowLeft, Plus, X, CheckCircle, Pencil, Trash2, Download, ShieldCheck, Printer, Tv, 
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
