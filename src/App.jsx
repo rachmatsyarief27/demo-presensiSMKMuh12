@@ -4,6 +4,7 @@ import {
   BookOpen, CreditCard, School, ArrowLeft, Plus, X, CheckCircle, Pencil, Trash2, Download, ShieldCheck, Printer, Tv, Eye, AlertTriangle, Archive, FileText, Lock, LogOut, User, Calendar, TrendingUp, PieChart, FileCheck, QrCode, Sun, Moon, Camera, Layers, ArrowUpRight, UserCheck, UserX, RefreshCw, Upload, Volume2 
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+
 // --- TAMBAHAN IMPORT SUPABASE ---
 import { supabase } from './supabaseClient';
 
@@ -57,6 +58,9 @@ export default function DashboardKehadiran() {
 
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [tempPhotoInput, setTempPhotoInput] = useState(adminPhoto);
+
+  // ================= STATE MENU HP / RESPONSIF =================
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // ================= STATE DENGAN LOCAL STORAGE =================
   const [dataGuru, setDataGuru] = useState(() => {
@@ -139,7 +143,7 @@ export default function DashboardKehadiran() {
     localStorage.setItem('arsipAbsensi', JSON.stringify(arsipAbsensi));
   }, [adminCredential, isAdminLoggedIn, isDarkMode, adminPhoto, tahunPelajaranAktif, daftarTahunPelajaran, dataGuru, dataSiswa, jadwalPiket, pengaturanJam, infoSekolah, logKehadiran, dataPelanggaran, dataPerizinan, arsipAbsensi]);
 
-  // ================= KODE PENGHUBUNG SUPABASE (BARIS 138) =================
+  // ================= KODE PENGHUBUNG SUPABASE =================
   useEffect(() => {
     const ambilDataDariSupabase = async () => {
       const { data: guruData } = await supabase.from('guru').select('*');
@@ -147,6 +151,36 @@ export default function DashboardKehadiran() {
 
       const { data: siswaData } = await supabase.from('siswa').select('*');
       if (siswaData && siswaData.length > 0) setDataSiswa(siswaData);
+
+      const { data: logData } = await supabase.from('log_kehadiran').select('*');
+      if (logData && logData.length > 0) setLogKehadiran(logData);
+
+      // --- PENGATURAN SEKOLAH ---
+      const { data: pengaturanData } = await supabase.from('pengaturan').select('*');
+      if (pengaturanData && pengaturanData.length > 0) {
+        setInfoSekolah({
+          nama: pengaturanData[0].nama || '',
+          alamat: pengaturanData[0].alamat || '',
+          logo: pengaturanData[0].logo || null,
+          pengumuman: pengaturanData[0].pengumuman || ''
+        });
+      }
+
+      // --- TAMBAHAN DATA PENDUKUNG (PELANGGARAN, PERIZINAN, PIKET, JAM) ---
+      const { data: pelanggaranData } = await supabase.from('data_pelanggaran').select('*');
+      if (pelanggaranData) setDataPelanggaran(pelanggaranData);
+
+      const { data: perizinanData } = await supabase.from('data_perizinan').select('*');
+      if (perizinanData) setDataPerizinan(perizinanData);
+
+      const { data: piketData } = await supabase.from('jadwal_piket').select('*');
+      if (piketData && piketData.length > 0) setJadwalPiket(piketData);
+
+      const { data: jamData } = await supabase.from('pengaturan_jam').select('*');
+      if (jamData && jamData.length > 0) {
+        setPengaturanJam(jamData[0]);
+      }
+      // ------------------------------------------------------------------
     };
 
     ambilDataDariSupabase();
@@ -442,42 +476,67 @@ export default function DashboardKehadiran() {
     }
   };
 
-  return (
-    <div className={`flex h-screen ${isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-gray-50 text-gray-800'} font-sans overflow-hidden transition-colors`}>
-      <aside className={`${isSidebarOpen ? 'w-72' : 'w-0 hidden'} ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-white border-gray-200'} border-r flex flex-col transition-all duration-300 ease-in-out`}>
-        <div className={`flex items-center gap-3 p-6 border-b ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
-          <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white overflow-hidden flex-shrink-0 shadow-md">
-            {infoSekolah.logo ? <img src={infoSekolah.logo} alt="Logo" className="w-full h-full object-cover" /> : <School size={24} />}
+ return (
+    <div className={`flex h-screen ${isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-gray-50 text-gray-800'} font-sans overflow-hidden transition-colors relative`}>
+      
+      {/* Backdrop Hitam Transparan khusus HP saat Sidebar Terbuka */}
+      {isSidebarOpen && (
+        <div 
+          onClick={() => setIsSidebarOpen(false)} 
+          className="fixed inset-0 z-40 bg-black bg-opacity-50 md:hidden"
+        ></div>
+      )}
+
+      {/* === SIDEBAR KIRI (Responsif: Laci di HP, Sidebar biasa di PC) === */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0
+        ${isSidebarOpen ? 'translate-x-0 w-72' : '-translate-x-full md:translate-x-0 md:w-0 md:hidden'} 
+        ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-white border-gray-200'} 
+        border-r flex flex-col shadow-2xl md:shadow-none flex-shrink-0
+      `}>
+        <div className={`flex items-center justify-between p-6 border-b ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white overflow-hidden flex-shrink-0 shadow-md">
+              {infoSekolah.logo ? <img src={infoSekolah.logo} alt="Logo" className="w-full h-full object-cover" /> : <School size={24} />}
+            </div>
+            <div>
+              <h1 className={`font-bold text-xs ${isDarkMode ? 'text-white' : 'text-gray-900'} leading-tight`}>
+                PRESENSI KEHADIRAN<br/>SEKOLAH
+              </h1>
+            </div>
           </div>
-          <div>
-            <h1 className={`font-bold text-xs ${isDarkMode ? 'text-white' : 'text-gray-900'} leading-tight`}>
-              PRESENSI KEHADIRAN<br/>SEKOLAH
-            </h1>
-          </div>
+          {/* Tombol Tutup (X) khusus tampilan HP di dalam sidebar */}
+          <button 
+            onClick={() => setIsSidebarOpen(false)} 
+            className="md:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg font-bold"
+          >
+            ✕
+          </button>
         </div>
+
         <div className="flex-1 overflow-y-auto py-4 px-3">
           <div className="mb-6">
             <p className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Administrator</p>
             <ul className="space-y-1">
-              <MenuItem id="rekapitulasi" icon={BarChart2} label="Rekapitulasi & Rapor" activeMenu={activeMenu} onClick={setActiveMenu} isDarkMode={isDarkMode} />
-              <MenuItem id="tahun-pelajaran" icon={Layers} label="Tahun Pelajaran & Kelas" activeMenu={activeMenu} onClick={setActiveMenu} isDarkMode={isDarkMode} />
-              <MenuItem id="master-data" icon={Users} label="Master Data Siswa & Guru" activeMenu={activeMenu} onClick={setActiveMenu} isDarkMode={isDarkMode} />
-              <MenuItem id="jadwal-piket" icon={Calendar} label="Jadwal Piket Guru" activeMenu={activeMenu} onClick={setActiveMenu} isDarkMode={isDarkMode} />
-              <MenuItem id="poin-disiplin" icon={AlertTriangle} label="Poin Disiplin & Pelanggaran" activeMenu={activeMenu} onClick={setActiveMenu} isDarkMode={isDarkMode} />
-              <MenuItem id="tren-disiplin" icon={TrendingUp} label="Tren & Statistik Disiplin" activeMenu={activeMenu} onClick={setActiveMenu} isDarkMode={isDarkMode} />
-              <MenuItem id="perizinan-siswa" icon={FileCheck} label="Perizinan & Surat Sakit" activeMenu={activeMenu} onClick={setActiveMenu} isDarkMode={isDarkMode} />
-              <MenuItem id="cetak-kartu" icon={Printer} label="Cetak Kartu RFID / QR" activeMenu={activeMenu} onClick={setActiveMenu} isDarkMode={isDarkMode} />
-              <MenuItem id="pengaturan-waktu" icon={Clock} label="Pengaturan Jam" activeMenu={activeMenu} onClick={setActiveMenu} isDarkMode={isDarkMode} />
-              <MenuItem id="pengaturan-umum" icon={Settings} label="Pengaturan Umum" activeMenu={activeMenu} onClick={setActiveMenu} isDarkMode={isDarkMode} />
+              <MenuItem id="rekapitulasi" icon={BarChart2} label="Rekapitulasi & Rapor" activeMenu={activeMenu} onClick={(id) => { setActiveMenu(id); setIsSidebarOpen(false); }} isDarkMode={isDarkMode} />
+              <MenuItem id="tahun-pelajaran" icon={Layers} label="Tahun Pelajaran & Kelas" activeMenu={activeMenu} onClick={(id) => { setActiveMenu(id); setIsSidebarOpen(false); }} isDarkMode={isDarkMode} />
+              <MenuItem id="master-data" icon={Users} label="Master Data Siswa & Guru" activeMenu={activeMenu} onClick={(id) => { setActiveMenu(id); setIsSidebarOpen(false); }} isDarkMode={isDarkMode} />
+              <MenuItem id="jadwal-piket" icon={Calendar} label="Jadwal Piket Guru" activeMenu={activeMenu} onClick={(id) => { setActiveMenu(id); setIsSidebarOpen(false); }} isDarkMode={isDarkMode} />
+              <MenuItem id="poin-disiplin" icon={AlertTriangle} label="Poin Disiplin & Pelanggaran" activeMenu={activeMenu} onClick={(id) => { setActiveMenu(id); setIsSidebarOpen(false); }} isDarkMode={isDarkMode} />
+              <MenuItem id="tren-disiplin" icon={TrendingUp} label="Tren & Statistik Disiplin" activeMenu={activeMenu} onClick={(id) => { setActiveMenu(id); setIsSidebarOpen(false); }} isDarkMode={isDarkMode} />
+              <MenuItem id="perizinan-siswa" icon={FileCheck} label="Perizinan & Surat Sakit" activeMenu={activeMenu} onClick={(id) => { setActiveMenu(id); setIsSidebarOpen(false); }} isDarkMode={isDarkMode} />
+              <MenuItem id="cetak-kartu" icon={Printer} label="Cetak Kartu RFID / QR" activeMenu={activeMenu} onClick={(id) => { setActiveMenu(id); setIsSidebarOpen(false); }} isDarkMode={isDarkMode} />
+              <MenuItem id="pengaturan-waktu" icon={Clock} label="Pengaturan Jam" activeMenu={activeMenu} onClick={(id) => { setActiveMenu(id); setIsSidebarOpen(false); }} isDarkMode={isDarkMode} />
+              <MenuItem id="pengaturan-umum" icon={Settings} label="Pengaturan Umum" activeMenu={activeMenu} onClick={(id) => { setActiveMenu(id); setIsSidebarOpen(false); }} isDarkMode={isDarkMode} />
             </ul>
           </div>
           <div>
             <p className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Absensi</p>
             <ul className="space-y-1">
-              <MenuItem id="absen-sekolah" icon={BookOpen} label="Absen Sekolah" activeMenu={activeMenu} onClick={setActiveMenu} isDarkMode={isDarkMode} />
-              <MenuItem id="absen-rfid" icon={CreditCard} label="Absen RFID / QR" activeMenu={activeMenu} onClick={setActiveMenu} isDarkMode={isDarkMode} />
-              <MenuItem id="mode-piket" icon={ShieldCheck} label="Mode Piket (Gerbang)" activeMenu={activeMenu} onClick={setActiveMenu} isDarkMode={isDarkMode} />
-              <MenuItem id="info-sekolah-tv" icon={Tv} label="Info Sekolah (Layar TV)" activeMenu={activeMenu} onClick={setActiveMenu} isDarkMode={isDarkMode} />
+              <MenuItem id="absen-sekolah" icon={BookOpen} label="Absen Sekolah" activeMenu={activeMenu} onClick={(id) => { setActiveMenu(id); setIsSidebarOpen(false); }} isDarkMode={isDarkMode} />
+              <MenuItem id="absen-rfid" icon={CreditCard} label="Absen RFID / QR" activeMenu={activeMenu} onClick={(id) => { setActiveMenu(id); setIsSidebarOpen(false); }} isDarkMode={isDarkMode} />
+              <MenuItem id="mode-piket" icon={ShieldCheck} label="Mode Piket (Gerbang)" activeMenu={activeMenu} onClick={(id) => { setActiveMenu(id); setIsSidebarOpen(false); }} isDarkMode={isDarkMode} />
+              <MenuItem id="info-sekolah-tv" icon={Tv} label="Info Sekolah (Layar TV)" activeMenu={activeMenu} onClick={(id) => { setActiveMenu(id); setIsSidebarOpen(false); }} isDarkMode={isDarkMode} />
             </ul>
           </div>
         </div>
@@ -728,8 +787,7 @@ const KontenAbsenSekolah = ({ dataGuru, dataSiswa, logKehadiran, setLogKehadiran
     }
   };
 
-  // LOGIKA SCAN ABSENSI RFID / QR CODE (DENGAN DUKUNGAN SEMUA MODE SHIFT)
-  const handleScanRFID = (e) => {
+  const handleScanRFID = async (e) => {
     if (e.key === 'Enter') {
       const scannedRfid = rfidInput.trim().toUpperCase();
       if (!scannedRfid) return;
@@ -769,16 +827,31 @@ const KontenAbsenSekolah = ({ dataGuru, dataSiswa, logKehadiran, setLogKehadiran
         let infoWaktu = '';
 
         if (existingLogIndex >= 0) {
-          const updatedLogs = [...logKehadiran];
-          if (!updatedLogs[existingLogIndex].waktuPulang) {
-            updatedLogs[existingLogIndex].waktuPulang = currentTimeFormatted;
+          const targetLog = logKehadiran[existingLogIndex];
+          if (!targetLog.waktuPulang) {
+            const waktuPulangBaru = currentTimeFormatted;
+            
+            // --- UPDATE KE SUPABASE (PULANG) ---
+            const { error: updateError } = await supabase
+              .from('log_kehadiran')
+              .update({ waktuPulang: waktuPulangBaru })
+              .eq('id', targetLog.id);
+
+            if (updateError) {
+              console.error("Gagal update pulang ke Supabase:", updateError.message);
+              showToast('Gagal memperbarui data pulang ke database!', 'error');
+            }
+            // -----------------------------------
+
+            const updatedLogs = [...logKehadiran];
+            updatedLogs[existingLogIndex].waktuPulang = waktuPulangBaru;
             
             const [pulangItem] = updatedLogs.splice(existingLogIndex, 1);
             updatedLogs.unshift(pulangItem);
 
             setLogKehadiran(updatedLogs);
             statusAktivitas = 'Absen Pulang Berhasil';
-            infoWaktu = currentTimeFormatted;
+            infoWaktu = waktuPulangBaru;
           } else {
             showToast(`${user.nama} sudah melakukan presensi pulang hari ini.`, 'error');
             setRfidInput('');
@@ -823,6 +896,17 @@ const KontenAbsenSekolah = ({ dataGuru, dataSiswa, logKehadiran, setLogKehadiran
             tahunPelajaran: tahunPelajaranAktif
           };
 
+          // --- INSERT KE SUPABASE (DATANG) ---
+          const { error: insertError } = await supabase
+            .from('log_kehadiran')
+            .insert([newLog]);
+          
+          if (insertError) {
+            console.error("Gagal simpan ke Supabase:", insertError.message);
+            showToast('Gagal menyimpan ke database cloud!', 'error');
+          }
+          // ----------------------------------
+
           setLogKehadiran([newLog, ...logKehadiran]);
           statusAktivitas = `Absen Datang (${statusKehadiran})`;
           infoWaktu = currentTimeFormatted;
@@ -844,9 +928,26 @@ const KontenAbsenSekolah = ({ dataGuru, dataSiswa, logKehadiran, setLogKehadiran
     }
   };
 
-  const updateStatusManual = (id, statusBaru) => {
+  // ==========================================================
+  // UPDATE STATUS MANUAL (TERHUBUNG KE SUPABASE)
+  // ==========================================================
+  const updateStatusManual = async (id, statusBaru) => {
+    // 1. Update ke Supabase
+    const { error } = await supabase
+      .from('log_kehadiran')
+      .update({ status: statusBaru })
+      .eq('id', id);
+
+    if (error) {
+      console.error("Gagal update status manual:", error.message);
+      showToast('Gagal memperbarui status di cloud!', 'error');
+      return;
+    }
+
+    // 2. Update state lokal
     const updated = logKehadiran.map(log => log.id === id ? { ...log, status: statusBaru } : log);
     setLogKehadiran(updated);
+    showToast('Status kehadiran berhasil diperbarui!', 'success');
   };
 
   const handleOpenTutupBukuModal = () => {
@@ -1352,8 +1453,8 @@ const LayarPenuhRFID = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKehad
     return; // Suara ucapan dimatikan total, hanya beep saja
   };
 
-  // FUNGSI PROSES SCAN DENGAN LOGIKA JADWAL GURU & SISWA
-  const processAbsenData = (identifier) => {
+  // --- FUNGSI PROSES SCAN DENGAN SUPABASE SYNC ---
+  const processAbsenData = async (identifier) => {
     if (!identifier) return;
     const cleanCode = identifier.trim().toUpperCase();
     
@@ -1401,108 +1502,126 @@ const LayarPenuhRFID = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKehad
     }
 
     const tanggalHariIniStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    const now = new Date();
+    const timeStr = now.toTimeString().split(' ')[0]; // Format "HH:MM:SS"
+    const timeFormatted = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-    setLogKehadiran(prevLogs => {
-      const existingLog = prevLogs.find(log => 
-        log.rfid.toUpperCase() === (user.rfid ? user.rfid.toUpperCase() : cleanCode) && 
-        log.tahunPelajaran === tahunPelajaranAktif && 
-        log.tanggal === tanggalHariIniStr
-      );
+    // Tentukan hari ini dalam Bahasa Indonesia untuk pengecekan jadwal guru
+    const listHariIndo = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const namaHariIni = listHariIndo[now.getDay()];
 
-      const now = new Date();
-      const timeStr = now.toTimeString().split(' ')[0]; // Format "HH:MM:SS"
-      const timeFormatted = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    // Tentukan jam mulai pulang (mengikuti jadwal guru jika guru, atau jamPulang siswa)
+    let jamMulaiPulangConfig = activeJamConfig?.jamPulang || '12:00';
+    if (userRole === 'guru' && user.jadwalMengajar?.[namaHariIni]?.aktif) {
+      jamMulaiPulangConfig = user.jadwalMengajar[namaHariIni].jamSelesai || '15:00';
+    }
 
-      // Tentukan hari ini dalam Bahasa Indonesia untuk pengecekan jadwal guru
-      const listHariIndo = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-      const namaHariIni = listHariIndo[now.getDay()];
+    const existingLog = logKehadiran.find(log => 
+      log.rfid.toUpperCase() === (user.rfid ? user.rfid.toUpperCase() : cleanCode) && 
+      log.tahunPelajaran === tahunPelajaranAktif && 
+      log.tanggal === tanggalHariIniStr
+    );
 
-      // Tentukan jam mulai pulang (mengikuti jadwal guru jika guru, atau jamPulang siswa)
-      let jamMulaiPulangConfig = activeJamConfig?.jamPulang || '12:00';
-      if (userRole === 'guru' && user.jadwalMengajar?.[namaHariIni]?.aktif) {
-        jamMulaiPulangConfig = user.jadwalMengajar[namaHariIni].jamSelesai || '15:00';
+    if (existingLog) {
+      // SUDAH ABSEN DATANG HARI INI
+      if (existingLog.waktuPulang) {
+        playBeep(false);
+        showToast(`⚠️ ${user.nama} sudah selesai presensi lengkap hari ini!`, 'error');
+        return;
       }
 
-      if (existingLog) {
-        // SUDAH ABSEN DATANG HARI INI
-        if (existingLog.waktuPulang) {
-          playBeep(false);
-          showToast(`⚠️ ${user.nama} sudah selesai presensi lengkap hari ini!`, 'error');
-          return prevLogs;
-        }
-
-        // Cek apakah sudah masuk jam pulang
-        if (timeStr >= jamMulaiPulangConfig) {
-          // PROSES ABSEN PULANG
-          playBeep(true);
-          showToast(`✅ Absen Pulang Berhasil: ${user.nama}`, 'success');
-          setLatestScan({
-            nama: user.nama,
-            kelas: userRole === 'siswa' ? userKelas : (user.jabatan_kelas || 'Guru & Staff'),
-            foto: user.foto || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.nama}`,
-            status: 'PULANG',
-            waktu: timeFormatted,
-            role: userRole
-          });
-
-          return prevLogs.map(log => log.id === existingLog.id ? { ...log, waktuPulang: timeFormatted } : log);
-        } else {
-          playBeep(false);
-          showToast(`⚠️ ${user.nama} sudah absen datang. Belum waktunya jam pulang!`, 'error');
-          return prevLogs;
-        }
-      } else {
-        // BELUM ADA LOG -> PROSES ABSEN DATANG
+      // Cek apakah sudah masuk jam pulang
+      if (timeStr >= jamMulaiPulangConfig) {
+        // PROSES ABSEN PULANG KE SUPABASE
         playBeep(true);
-        let statusKehadiran = 'Tepat Waktu';
+        const { error: updateError } = await supabase
+          .from('log_kehadiran')
+          .update({ waktuPulang: timeFormatted })
+          .eq('id', existingLog.id);
 
-        if (userRole === 'guru') {
-          const jadwalGuruHariIni = user.jadwalMengajar?.[namaHariIni];
-          if (jadwalGuruHariIni) {
-            if (!jadwalGuruHariIni.aktif) {
-              statusKehadiran = 'Hadir (Luar Jadwal)';
-            } else {
-              const jamMulaiGuru = jadwalGuruHariIni.jamMulai.length === 5 ? `${jadwalGuruHariIni.jamMulai}:00` : jadwalGuruHariIni.jamMulai;
-              statusKehadiran = timeStr > jamMulaiGuru ? 'Terlambat' : 'Tepat Waktu';
-            }
-          } else {
-            statusKehadiran = timeStr > '07:30:00' ? 'Terlambat' : 'Tepat Waktu';
-          }
-        } else {
-          // STATUS SISWA (Mengikuti toleransi jam sekolah aktif)
-          const batasTelatRaw = activeJamConfig?.ambangTerlambat || '07:15';
-          const ambangSiswa = batasTelatRaw.length === 5 ? `${batasTelatRaw}:00` : batasTelatRaw;
-          statusKehadiran = timeStr > ambangSiswa ? 'Terlambat' : 'Tepat Waktu';
+        if (updateError) {
+          console.error("Gagal update pulang QR ke Supabase:", updateError.message);
+          showToast("Gagal memperbarui absen pulang ke database cloud!", "error");
+          return;
         }
 
-        const statusAbsenFinal = `DATANG (${statusKehadiran})`;
-
-        showToast(`✅ Absen Datang Berhasil: ${user.nama}`, 'success');
+        showToast(`✅ Absen Pulang Berhasil: ${user.nama}`, 'success');
         setLatestScan({
           nama: user.nama,
           kelas: userRole === 'siswa' ? userKelas : (user.jabatan_kelas || 'Guru & Staff'),
           foto: user.foto || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.nama}`,
-          status: statusAbsenFinal,
+          status: 'PULANG',
           waktu: timeFormatted,
           role: userRole
         });
 
-        const newLog = {
-          id: Date.now() + Math.random(),
-          rfid: user.rfid || cleanCode,
-          nama: user.nama,
-          jabatan_kelas: userRole === 'siswa' ? userKelas : (user.jabatan_kelas || 'Guru & Staff'),
-          role: userRole,
-          waktuDatang: timeFormatted,
-          waktuPulang: null,
-          status: statusKehadiran,
-          tanggal: tanggalHariIniStr,
-          tahunPelajaran: tahunPelajaranAktif
-        };
-
-        return [newLog, ...prevLogs];
+        const updatedLogs = logKehadiran.map(log => log.id === existingLog.id ? { ...log, waktuPulang: timeFormatted } : log);
+        setLogKehadiran(updatedLogs);
+      } else {
+        playBeep(false);
+        showToast(`⚠️ ${user.nama} sudah absen datang. Belum waktunya jam pulang!`, 'error');
       }
-    });
+    } else {
+      // BELUM ADA LOG -> PROSES ABSEN DATANG KE SUPABASE
+      playBeep(true);
+      let statusKehadiran = 'Tepat Waktu';
+
+      if (userRole === 'guru') {
+        const jadwalGuruHariIni = user.jadwalMengajar?.[namaHariIni];
+        if (jadwalGuruHariIni) {
+          if (!jadwalGuruHariIni.aktif) {
+            statusKehadiran = 'Hadir (Luar Jadwal)';
+          } else {
+            const jamMulaiGuru = jadwalGuruHariIni.jamMulai.length === 5 ? `${jadwalGuruHariIni.jamMulai}:00` : jadwalGuruHariIni.jamMulai;
+            statusKehadiran = timeStr > jamMulaiGuru ? 'Terlambat' : 'Tepat Waktu';
+          }
+        } else {
+          statusKehadiran = timeStr > '07:30:00' ? 'Terlambat' : 'Tepat Waktu';
+        }
+      } else {
+        const batasTelatRaw = activeJamConfig?.ambangTerlambat || '07:15';
+        const ambangSiswa = batasTelatRaw.length === 5 ? `${batasTelatRaw}:00` : batasTelatRaw;
+        statusKehadiran = timeStr > ambangSiswa ? 'Terlambat' : 'Tepat Waktu';
+      }
+
+      const statusAbsenFinal = `DATANG (${statusKehadiran})`;
+
+      const newLog = {
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        rfid: user.rfid || cleanCode,
+        nama: user.nama,
+        jabatan_kelas: userRole === 'siswa' ? userKelas : (user.jabatan_kelas || 'Guru & Staff'),
+        role: userRole,
+        waktuDatang: timeFormatted,
+        waktuPulang: null,
+        status: statusKehadiran,
+        tanggal: tanggalHariIniStr,
+        tahunPelajaran: tahunPelajaranAktif
+      };
+
+      // INSERT KE SUPABASE
+      const { error: insertError } = await supabase
+        .from('log_kehadiran')
+        .insert([newLog]);
+
+      if (insertError) {
+        console.error("Gagal insert QR ke Supabase:", insertError.message);
+        showToast("Gagal menyimpan absen datang ke database cloud!", "error");
+        return;
+      }
+
+      showToast(`✅ Absen Datang Berhasil: ${user.nama}`, 'success');
+      setLatestScan({
+        nama: user.nama,
+        kelas: userRole === 'siswa' ? userKelas : (user.jabatan_kelas || 'Guru & Staff'),
+        foto: user.foto || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.nama}`,
+        status: statusAbsenFinal,
+        waktu: timeFormatted,
+        role: userRole
+      });
+
+      setLogKehadiran(prev => [newLog, ...prev]);
+    }
   };
 
   // Load jsQR script secara dinamis & jalankan pemindaian kamera
@@ -1922,7 +2041,6 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
       audioSrc = pengaturanAudio?.berhasil; 
     }
 
-    // Hanya memutar file audio kustom jika sudah diunggah oleh pengguna
     if (audioSrc) {
       const audio = new Audio(audioSrc);
       audio.volume = 1.0; 
@@ -1932,7 +2050,8 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
 
   const tanggalHariIniStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 
-  const handleManualStatusChangeSiswa = (siswa, statusPikan) => {
+  // --- MANUAL STATUS SISWA (SUPABASE SYNC) ---
+  const handleManualStatusChangeSiswa = async (siswa, statusPikan) => {
     const now = new Date();
     const currentTimeStr = now.toTimeString().split(' ')[0];
     const currentTimeFormatted = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -1949,17 +2068,22 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
     );
 
     if (existingIndex >= 0) {
-      updatedLogs[existingIndex] = {
-        ...updatedLogs[existingIndex],
+      const targetLog = updatedLogs[existingIndex];
+      const dataUpdate = {
         status: finalStatus,
         waktuDatang: ['Tepat Waktu', 'Terlambat', 'Hadir'].includes(finalStatus) 
-          ? (updatedLogs[existingIndex].waktuDatang && updatedLogs[existingIndex].waktuDatang !== '-' ? updatedLogs[existingIndex].waktuDatang : currentTimeFormatted)
+          ? (targetLog.waktuDatang && targetLog.waktuDatang !== '-' ? targetLog.waktuDatang : currentTimeFormatted)
           : '-',
-        waktuPulang: ['Tepat Waktu', 'Terlambat', 'Hadir'].includes(finalStatus) ? updatedLogs[existingIndex].waktuPulang : null
+        waktuPulang: ['Tepat Waktu', 'Terlambat', 'Hadir'].includes(finalStatus) ? targetLog.waktuPulang : null
       };
+
+      // UPDATE KE SUPABASE
+      await supabase.from('log_kehadiran').update(dataUpdate).eq('id', targetLog.id);
+
+      updatedLogs[existingIndex] = { ...targetLog, ...dataUpdate };
     } else {
       const newLog = {
-        id: 'manual-siswa-' + Date.now() + Math.random(),
+        id: Date.now() + Math.floor(Math.random() * 1000),
         rfid: siswa.rfid || 'MANUAL',
         nama: siswa.nama,
         jabatan_kelas: selectedKelasModal,
@@ -1970,6 +2094,10 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
         tanggal: tanggalHariIniStr,
         tahunPelajaran: tahunPelajaranAktif
       };
+
+      // INSERT KE SUPABASE
+      await supabase.from('log_kehadiran').insert([newLog]);
+
       updatedLogs.unshift(newLog);
     }
 
@@ -1983,7 +2111,8 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
     }
   };
 
-  const handleManualStatusChangeGuru = (guru, statusPikan) => {
+  // --- MANUAL STATUS GURU (SUPABASE SYNC) ---
+  const handleManualStatusChangeGuru = async (guru, statusPikan) => {
     const now = new Date();
     const currentTimeStr = now.toTimeString().split(' ')[0];
     const currentTimeFormatted = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -2010,17 +2139,22 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
     );
 
     if (existingIndex >= 0) {
-      updatedLogs[existingIndex] = {
-        ...updatedLogs[existingIndex],
+      const targetLog = updatedLogs[existingIndex];
+      const dataUpdate = {
         status: finalStatus,
         waktuDatang: ['Tepat Waktu', 'Terlambat', 'Hadir', 'Hadir (Luar Jadwal)'].includes(finalStatus) 
-          ? (updatedLogs[existingIndex].waktuDatang && updatedLogs[existingIndex].waktuDatang !== '-' ? updatedLogs[existingIndex].waktuDatang : currentTimeFormatted)
+          ? (targetLog.waktuDatang && targetLog.waktuDatang !== '-' ? targetLog.waktuDatang : currentTimeFormatted)
           : '-',
-        waktuPulang: ['Tepat Waktu', 'Terlambat', 'Hadir', 'Hadir (Luar Jadwal)'].includes(finalStatus) ? updatedLogs[existingIndex].waktuPulang : null
+        waktuPulang: ['Tepat Waktu', 'Terlambat', 'Hadir', 'Hadir (Luar Jadwal)'].includes(finalStatus) ? targetLog.waktuPulang : null
       };
+
+      // UPDATE KE SUPABASE
+      await supabase.from('log_kehadiran').update(dataUpdate).eq('id', targetLog.id);
+
+      updatedLogs[existingIndex] = { ...targetLog, ...dataUpdate };
     } else {
       const newLog = {
-        id: 'manual-guru-' + Date.now() + Math.random(),
+        id: Date.now() + Math.floor(Math.random() * 1000),
         rfid: guru.rfid || 'MANUAL',
         nama: guru.nama,
         jabatan_kelas: guru.jabatan_kelas,
@@ -2031,6 +2165,10 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
         tanggal: tanggalHariIniStr,
         tahunPelajaran: tahunPelajaranAktif
       };
+
+      // INSERT KE SUPABASE
+      await supabase.from('log_kehadiran').insert([newLog]);
+
       updatedLogs.unshift(newLog);
     }
 
@@ -2044,7 +2182,8 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
     }
   };
 
-  const handleAbsenPulangManual = (wargaNama, wargaRfid) => {
+  // --- ABSEN PULANG MANUAL (SUPABASE SYNC) ---
+  const handleAbsenPulangManual = async (wargaNama) => {
     const currentTimeFormatted = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
     const existingIndex = logKehadiran.findIndex(
@@ -2053,7 +2192,12 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
 
     if (existingIndex >= 0) {
       const updatedLogs = [...logKehadiran];
-      updatedLogs[existingIndex] = { ...updatedLogs[existingIndex], waktuPulang: currentTimeFormatted };
+      const targetLog = updatedLogs[existingIndex];
+      
+      // UPDATE KE SUPABASE
+      await supabase.from('log_kehadiran').update({ waktuPulang: currentTimeFormatted }).eq('id', targetLog.id);
+
+      updatedLogs[existingIndex] = { ...targetLog, waktuPulang: currentTimeFormatted };
       const target = updatedLogs.splice(existingIndex, 1)[0];
       updatedLogs.unshift(target);
 
@@ -2100,8 +2244,8 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
   const siswaSudahPulang = siswaHadirList.filter(l => l.waktuPulang !== null).length;
   const siswaBelumPulang = siswaHadirCount - siswaSudahPulang;
 
-  // LOGIKA SCAN KARTU DI GERBANG PIKET
-  const handleGateScan = (e) => {
+  // --- LOGIKA SCAN KARTU DI GERBANG PIKET (SUPABASE SYNC) ---
+  const handleGateScan = async (e) => {
     if (e.key === 'Enter') {
       const scannedRfid = rfidInput.trim().toUpperCase();
       if (!scannedRfid) return;
@@ -2145,7 +2289,9 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
         }
 
         if (existingLogIndex >= 0) {
-          const currentStatus = logKehadiran[existingLogIndex].status;
+          const updatedLogs = [...logKehadiran];
+          const existingLog = updatedLogs[existingLogIndex];
+          const currentStatus = existingLog.status;
           
           if (['Sakit', 'Izin', 'Alpa'].includes(currentStatus)) {
             playBeep(true);
@@ -2155,13 +2301,14 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
             return;
           }
 
-          const updatedLogs = [...logKehadiran];
-          const existingLog = updatedLogs[existingLogIndex];
-
           if (!existingLog.waktuPulang) {
             if (currentTimeStr >= jamMulaiPulangConfig) {
               playBeep(true);
               existingLog.waktuPulang = currentTimeFormatted;
+              
+              // UPDATE PULANG KE SUPABASE
+              await supabase.from('log_kehadiran').update({ waktuPulang: currentTimeFormatted }).eq('id', existingLog.id);
+
               updatedLogs.splice(existingLogIndex, 1);
               updatedLogs.unshift(existingLog);
               
@@ -2204,7 +2351,7 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
           }
 
           const newLog = {
-            id: 'scan-' + Date.now(),
+            id: Date.now() + Math.floor(Math.random() * 1000),
             rfid: user.rfid || scannedRfid,
             nama: user.nama,
             jabatan_kelas: userRole === 'siswa' ? userKelas : user.jabatan_kelas,
@@ -2215,6 +2362,10 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
             tanggal: tanggalHariIniStr,
             tahunPelajaran: tahunPelajaranAktif
           };
+
+          // INSERT DATANG KE SUPABASE
+          await supabase.from('log_kehadiran').insert([newLog]);
+
           setLogKehadiran([newLog, ...logKehadiran]);
           setLastScanned({ ...user, jabatan_kelas: userRole === 'siswa' ? userKelas : user.jabatan_kelas, tipe: 'DATANG', waktu: currentTimeFormatted, status: statusKehadiran, rfid: user.rfid || scannedRfid });
           showToast(`Berhasil Absen Datang (${statusKehadiran}): ${user.nama}`, 'success');
@@ -2537,7 +2688,7 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
                                     <button onClick={() => handleManualStatusChangeSiswa(siswa, 'Alpa')} className="px-2.5 py-1 bg-rose-600/30 hover:bg-rose-600 text-rose-200 hover:text-white rounded-lg font-semibold text-[10px] transition cursor-pointer">Alpa</button>
                                     
                                     {sudahHadir && !waktuPulangVal && (
-                                      <button onClick={() => handleAbsenPulangManual(siswa.nama, siswa.rfid)} className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[10px] transition cursor-pointer shadow">
+                                      <button onClick={() => handleAbsenPulangManual(siswa.nama)} className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[10px] transition cursor-pointer shadow">
                                         Pulang
                                       </button>
                                     )}
@@ -2610,7 +2761,7 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
                                   <button onClick={() => handleManualStatusChangeGuru(guru, 'Alpa')} className="px-2.5 py-1 bg-rose-600/30 hover:bg-rose-600 text-rose-200 hover:text-white rounded-lg font-semibold text-[10px] transition cursor-pointer">Alpa</button>
                                   
                                   {sudahHadirGuru && !waktuPulangGuruVal && (
-                                    <button onClick={() => handleAbsenPulangManual(guru.nama, guru.rfid)} className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[10px] transition cursor-pointer shadow">
+                                    <button onClick={() => handleAbsenPulangManual(guru.nama)} className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[10px] transition cursor-pointer shadow">
                                       Pulang
                                     </button>
                                   )}
@@ -2637,9 +2788,35 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
 /* ==============================================================
    4. KOMPONEN MODE INFO SEKOLAH (LAYAR TV & RUNNING TEXT)
 ============================================================== */
-const ModeInfoSekolahTV = ({ onBack, infoSekolah, logKehadiran, dataGuru, dataSiswa, tahunPelajaranAktif }) => {
+const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // State lokal khusus TV agar bisa fetch mandiri ke Supabase
+  const [logKehadiran, setLogKehadiran] = useState([]);
+  const [dataGuru, setDataGuru] = useState([]);
+  const [dataSiswa, setDataSiswa] = useState([]);
+
+  // --- AMBIL DATA MANDIRI DARI SUPABASE UNTUK LAYAR TV ---
+  useEffect(() => {
+    const ambilDataTV = async () => {
+      const { data: logData } = await supabase.from('log_kehadiran').select('*');
+      if (logData) setLogKehadiran(logData);
+
+      const { data: guruData } = await supabase.from('guru').select('*');
+      if (guruData) setDataGuru(guruData);
+
+      const { data: siswaData } = await supabase.from('siswa').select('*');
+      if (siswaData) setDataSiswa(siswaData);
+    };
+
+    ambilDataTV();
+
+    // Auto-refresh data setiap 10 detik agar layar TV selalu update otomatis
+    const interval = setInterval(ambilDataTV, 10000);
+    return () => clearInterval(interval);
+  }, []);
+  // ------------------------------------------------------
 
   // Timer jam digital real-time
   useEffect(() => {
@@ -3303,17 +3480,34 @@ const KontenJadwalPiket = ({ jadwalPiket, setJadwalPiket, daftarGuru, isDarkMode
   const handleOpenEdit = (item) => {
     setEditingId(item.id);
     setHari(item.hari);
-    setPetugas1(item.petugas1);
-    setPetugas2(item.petugas2);
+    setPetugas1(item.petugas1 || '');
+    setPetugas2(item.petugas2 || '');
     setIsModalOpen(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    const updated = jadwalPiket.map(item => item.id === editingId ? { ...item,petugas1, petugas2 } : item);
+    
+    // 1. Update ke Supabase Cloud berdasarkan id baris hari tersebut
+    const { error } = await supabase
+      .from('jadwal_piket')
+      .update({ 
+        petugas1: petugas1, 
+        petugas2: petugas2 
+      })
+      .eq('id', editingId);
+
+    if (error) {
+      console.error('Gagal memperbarui jadwal piket di cloud:', error.message);
+      alert('Gagal menyimpan perubahan ke database cloud!');
+      return;
+    }
+
+    // 2. Update state lokal jika sukses
+    const updated = jadwalPiket.map(item => item.id === editingId ? { ...item, petugas1, petugas2 } : item);
     setJadwalPiket(updated);
     setIsModalOpen(false);
-    alert('Jadwal piket guru berhasil diperbarui!');
+    alert('Jadwal piket guru berhasil diperbarui dan tersimpan di cloud!');
   };
 
   return (
@@ -3323,7 +3517,7 @@ const KontenJadwalPiket = ({ jadwalPiket, setJadwalPiket, daftarGuru, isDarkMode
           <h3 className="text-xl font-bold flex items-center gap-2">
             <Calendar className="text-blue-600" /> Modul Jadwal Piket Guru Harian
           </h3>
-          <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Atur penugasan Petugas 1 dan Petugas 2 untuk gerbang sekolah dari Senin hingga Sabtu.</p>
+          <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Atur penugasan Petugas 1 dan Petugas 2 untuk gerbang sekolah dari Senin hingga Sabtu secara real-time cloud.</p>
         </div>
       </div>
 
@@ -3338,21 +3532,27 @@ const KontenJadwalPiket = ({ jadwalPiket, setJadwalPiket, daftarGuru, isDarkMode
             </tr>
           </thead>
           <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800' : 'divide-gray-100'} text-sm`}>
-            {jadwalPiket.map((item) => (
-              <tr key={item.id} className={`${isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-gray-50'}`}>
-                <td className="px-6 py-4 font-bold text-blue-500 w-32">{item.hari}</td>
-                <td className="px-6 py-4 font-medium">{item.petugas1 || '-'}</td>
-                <td className="px-6 py-4 font-medium">{item.petugas2 || '-'}</td>
-                <td className="px-6 py-4 text-right">
-                  <button 
-                    onClick={() => handleOpenEdit(item)} 
-                    className={`px-3 py-1.5 ${isDarkMode ? 'bg-blue-950 text-blue-300 hover:bg-blue-900' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'} rounded-lg font-medium text-xs flex items-center gap-1.5 ml-auto transition cursor-pointer`}
-                  >
-                    <Pencil size={14} /> Edit Petugas
-                  </button>
-                </td>
+            {jadwalPiket && jadwalPiket.length > 0 ? (
+              jadwalPiket.map((item) => (
+                <tr key={item.id} className={`${isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-gray-50'}`}>
+                  <td className="px-6 py-4 font-bold text-blue-500 w-32">{item.hari}</td>
+                  <td className="px-6 py-4 font-medium">{item.petugas1 || '-'}</td>
+                  <td className="px-6 py-4 font-medium">{item.petugas2 || '-'}</td>
+                  <td className="px-6 py-4 text-right">
+                    <button 
+                      onClick={() => handleOpenEdit(item)} 
+                      className={`px-3 py-1.5 ${isDarkMode ? 'bg-blue-950 text-blue-300 hover:bg-blue-900' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'} rounded-lg font-medium text-xs flex items-center gap-1.5 ml-auto transition cursor-pointer`}
+                    >
+                      <Pencil size={14} /> Edit Petugas
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="4" className="text-center py-12 text-gray-400 text-xs italic">Belum ada data jadwal piket di database.</td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
@@ -3365,7 +3565,7 @@ const KontenJadwalPiket = ({ jadwalPiket, setJadwalPiket, daftarGuru, isDarkMode
               <h3 className="text-lg font-bold">Edit Petugas Piket - {hari}</h3>
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="text-gray-400 hover:text-red-500 font-bold text-lg"
+                className="cursor-pointer text-gray-400 hover:text-red-500 font-bold text-lg"
               >
                 ✕
               </button>
@@ -3408,13 +3608,13 @@ const KontenJadwalPiket = ({ jadwalPiket, setJadwalPiket, daftarGuru, isDarkMode
                 <button 
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium border ${isDarkMode ? 'border-slate-700 hover:bg-slate-800' : 'border-gray-300 hover:bg-gray-100'}`}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium border cursor-pointer ${isDarkMode ? 'border-slate-700 hover:bg-slate-800' : 'border-gray-300 hover:bg-gray-100'}`}
                 >
                   Batal
                 </button>
                 <button 
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition cursor-pointer"
                 >
                   Simpan Perubahan
                 </button>
@@ -3445,7 +3645,7 @@ const KontenPoinDisiplin = ({ dataSiswa, dataPelanggaran, setDataPelanggaran, is
     ? siswaAktifTP 
     : siswaAktifTP.filter(s => s.kelasPerTP[tahunPelajaranAktif] === selectedKelasFilter);
 
-  const handleAddPelanggaran = (e) => {
+  const handleAddPelanggaran = async (e) => {
     e.preventDefault();
     const targetSiswa = dataSiswa.find(s => s.id.toString() === selectedSiswaId.toString());
     if (!targetSiswa) return;
@@ -3457,23 +3657,60 @@ const KontenPoinDisiplin = ({ dataSiswa, dataPelanggaran, setDataPelanggaran, is
     }
 
     const newRecord = {
-      id: Date.now(),
       tanggal: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
-      namaSiswa: targetSiswa.nama,
+      nama_siswa: targetSiswa.nama,
       kelas: targetSiswa.kelasPerTP[tahunPelajaranAktif] || '-',
-      jenisPelanggaran: jenisPelanggaran,
+      jenis_pelanggaran: jenisPelanggaran,
       poin: parsedPoin,
-      tahunPelajaran: tahunPelajaranAktif
+      tahun_pelajaran: tahunPelajaranAktif
     };
 
-    setDataPelanggaran([newRecord, ...dataPelanggaran]);
+    // 1. Simpan ke Supabase Cloud
+    const { data, error } = await supabase
+      .from('data_pelanggaran')
+      .insert([newRecord])
+      .select();
+
+    if (error) {
+      console.error('Gagal menyimpan pelanggaran:', error.message);
+      alert('Gagal menyimpan ke database cloud!');
+      return;
+    }
+
+    // 2. Jika sukses, masukkan ke state lokal dengan format yang sesuai
+    if (data && data.length > 0) {
+      const formattedRecord = {
+        id: data[0].id,
+        tanggal: data[0].tanggal,
+        namaSiswa: data[0].nama_siswa,
+        kelas: data[0].kelas,
+        jenisPelanggaran: data[0].jenis_pelanggaran,
+        poin: data[0].poin,
+        tahunPelajaran: data[0].tahun_pelajaran
+      };
+      setDataPelanggaran([formattedRecord, ...dataPelanggaran]);
+    }
+
     setJenisPelanggaran('');
     setPoin(5);
     setIsModalOpen(false);
   };
 
-  const handleDeletePelanggaran = (id) => {
+  const handleDeletePelanggaran = async (id) => {
     if (window.confirm('Hapus catatan pelanggaran ini?')) {
+      // 1. Hapus dari Supabase Cloud
+      const { error } = await supabase
+        .from('data_pelanggaran')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Gagal menghapus pelanggaran:', error.message);
+        alert('Gagal menghapus data dari cloud!');
+        return;
+      }
+
+      // 2. Hapus dari state lokal
       setDataPelanggaran(dataPelanggaran.filter(p => p.id !== id));
     }
   };
@@ -3502,7 +3739,7 @@ const KontenPoinDisiplin = ({ dataSiswa, dataPelanggaran, setDataPelanggaran, is
       <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100 text-gray-800'} p-6 rounded-xl shadow-sm border flex flex-col md:flex-row justify-between items-center gap-4`}>
         <div>
           <h3 className="text-xl font-bold">Modul Poin Disiplin & Pelanggaran ({tahunPelajaranAktif})</h3>
-          <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Pantau catatan kedisiplinan dan akumulasi poin pelanggaran siswa per kelas.</p>
+          <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Pantau catatan kedisiplinan dan akumulasi poin pelanggaran siswa per kelas secara real-time cloud.</p>
         </div>
         <div className="flex items-center gap-3 w-full md:w-auto">
           <div className="flex items-center gap-2">
@@ -3674,7 +3911,6 @@ const KontenPoinDisiplin = ({ dataSiswa, dataPelanggaran, setDataPelanggaran, is
     </div>
   );
 };
-
 
 /* ==============================================================
    8. KOMPONEN TREN & STATISTIK DISIPLIN
@@ -3864,7 +4100,7 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
     ? siswaAktifTP 
     : siswaAktifTP.filter(s => s.kelasPerTP[tahunPelajaranAktif] === selectedKelasFilter);
 
-  const handleAddPerizinan = (e) => {
+  const handleAddPerizinan = async (e) => {
     e.preventDefault();
     const targetSiswa = dataSiswa.find(s => s.id.toString() === selectedSiswaId.toString());
     if (!targetSiswa) return;
@@ -3875,32 +4111,86 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
     }
 
     const newRecord = {
-      id: Date.now(),
       tanggal: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
       nama: targetSiswa.nama,
       kelas: targetSiswa.kelasPerTP[tahunPelajaranAktif] || '-',
-      jenisIzin,
-      jamKeluar,
-      jamKembali: jamKembali || '-',
+      jenis_izin: jenisIzin,
+      jam_keluar: jamKeluar,
+      jam_kembali: jamKembali || '-',
       status: 'Sedang di Luar',
-      pemberiIzin,
-      tahunPelajaran: tahunPelajaranAktif
+      pemberi_izin: pemberiIzin,
+      tahun_pelajaran: tahunPelajaranAktif
     };
 
-    setDataPerizinan([newRecord, ...dataPerizinan]);
+    // 1. Simpan ke Supabase Cloud
+    const { data, error } = await supabase
+      .from('data_perizinan')
+      .insert([newRecord])
+      .select();
+
+    if (error) {
+      console.error('Gagal menyimpan perizinan:', error.message);
+      alert('Gagal menyimpan perizinan ke database cloud!');
+      return;
+    }
+
+    // 2. Update state lokal jika sukses
+    if (data && data.length > 0) {
+      const formattedRecord = {
+        id: data[0].id,
+        tanggal: data[0].tanggal,
+        nama: data[0].nama,
+        kelas: data[0].kelas,
+        jenisIzin: data[0].jenis_izin,
+        jamKeluar: data[0].jam_keluar,
+        jamKembali: data[0].jam_kembali,
+        status: data[0].status,
+        pemberiIzin: data[0].pemberi_izin,
+        tahunPelajaran: data[0].tahun_pelajaran
+      };
+      setDataPerizinan([formattedRecord, ...dataPerizinan]);
+    }
+
     setJenisIzin('');
     setJamKembali('');
     setIsModalOpen(false);
   };
 
-  const handleTandaiKembali = (id) => {
+  const handleTandaiKembali = async (id) => {
     const nowStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    
+    // 1. Update ke Supabase Cloud
+    const { error } = await supabase
+      .from('data_perizinan')
+      .update({ status: 'Sudah Kembali', jam_kembali: nowStr })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Gagal memperbarui status kembali:', error.message);
+      alert('Gagal memperbarui status di cloud!');
+      return;
+    }
+
+    // 2. Update state lokal
     const updated = dataPerizinan.map(item => item.id === id ? { ...item, status: 'Sudah Kembali', jamKembali: nowStr } : item);
     setDataPerizinan(updated);
   };
 
-  const handleDeletePerizinan = (id) => {
+  const handleDeletePerizinan = async (id) => {
     if (window.confirm('Hapus catatan perizinan ini?')) {
+      // 1. Hapus dari Supabase Cloud
+      const { error } = await supabase
+        .from('data_perizinan')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Gagal menghapus perizinan:', error.message);
+        alert('Gagal menghapus data dari cloud!');
+        return;
+      }
+
+      // 2. Update state lokal
       setDataPerizinan(dataPerizinan.filter(p => p.id !== id));
     }
   };
@@ -3935,7 +4225,7 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
           <h3 className="text-xl font-bold flex items-center gap-2">
             <FileCheck className="text-blue-600" /> Modul Perizinan & Surat Sakit Online ({tahunPelajaranAktif})
           </h3>
-          <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Kelola dan pantau siswa yang izin keluar gerbang di tengah jam pelajaran.</p>
+          <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Kelola dan pantau siswa yang izin keluar gerbang di tengah jam pelajaran secara real-time cloud.</p>
         </div>
         <div className="flex items-center gap-3 w-full md:w-auto">
           <div className="flex items-center gap-2">
@@ -4034,7 +4324,6 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
 
             <div className="p-6 overflow-y-auto flex-1 bg-gray-50 flex justify-center">
               <div id="printable-surat-izin" className="bg-white text-gray-800 w-[650px] p-8 shadow-sm rounded-xl space-y-6 border">
-                {/* Kop Surat Bersih: Logo, Nama, Alamat, & Posisi Tengah Presisi */}
                 <div className="flex items-center justify-between border-b-2 border-gray-800 pb-4">
                   <div className="w-20 h-20 bg-blue-600 rounded-xl flex items-center justify-center text-white overflow-hidden flex-shrink-0 shadow-sm">
                     {infoSekolah.logo ? <img src={infoSekolah.logo} alt="Logo" className="w-full h-full object-cover" /> : <School size={40} />}
@@ -4598,8 +4887,28 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
   const [siang, setSiang] = useState(pengaturanJam.siang || { jamMasuk: '13:30', ambangTerlambat: '13:45', jamPulang: '18:00' });
   const [fullDay, setFullDay] = useState(pengaturanJam.fullDay || { jamMasuk: '07:00', ambangTerlambat: '07:15', jamPulang: '15:30' });
 
-  const handleSaveSiswa = (e) => {
+  const handleSaveSiswa = async (e) => {
     e.preventDefault();
+    const dataBaruPengaturan = {
+      id: 1, // Kita kunci baris pertama sebagai konfigurasi utama
+      mode_aktif: modeAktif,
+      pagi: pagi,
+      siang: siang,
+      full_day: fullDay
+    };
+
+    // 1. Simpan ke Supabase Cloud (tabel pengaturan_jam)
+    const { error } = await supabase
+      .from('pengaturan_jam')
+      .upsert([dataBaruPengaturan]);
+
+    if (error) {
+      console.error('Gagal menyimpan pengaturan jam:', error.message);
+      alert('Gagal menyimpan pengaturan ke database cloud!');
+      return;
+    }
+
+    // 2. Update state lokal
     setPengaturanJam({
       ...pengaturanJam,
       modeAktif,
@@ -4607,10 +4916,10 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
       siang,
       fullDay
     });
-    alert(`Berhasil! Mode Jam Aktif Siswa saat ini diubah ke: ${modeAktif}`);
+    alert(`Berhasil! Mode Jam Aktif Siswa saat ini diubah ke: ${modeAktif} dan tersimpan di cloud.`);
   };
 
-  // State untuk Modal Pengaturan Jadwal Mengajar Guru (Dilengkapi jamMulai & jamSelesai)
+  // State untuk Modal Pengaturan Jadwal Mengajar Guru
   const [isJadwalModalOpen, setIsJadwalModalOpen] = useState(false);
   const [selectedGuruJadwal, setSelectedGuruJadwal] = useState(null);
   const [formDataJadwal, setFormDataJadwal] = useState({
@@ -4637,10 +4946,23 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
     setIsJadwalModalOpen(true);
   };
 
-  const handleSaveJadwal = (e) => {
+  const handleSaveJadwal = async (e) => {
     e.preventDefault();
     if (!selectedGuruJadwal) return;
 
+    // 1. Update ke Supabase Cloud (tabel guru)
+    const { error } = await supabase
+      .from('guru')
+      .update({ jadwal_mengajar: formDataJadwal })
+      .eq('id', selectedGuruJadwal.id);
+
+    if (error) {
+      console.error('Gagal menyimpan jadwal guru ke cloud:', error.message);
+      alert('Gagal memperbarui jadwal guru di database!');
+      return;
+    }
+
+    // 2. Update state lokal
     const updatedGuruList = dataGuru.map(g => {
       if (g.id === selectedGuruJadwal.id) {
         return { ...g, jadwalMengajar: formDataJadwal };
@@ -4650,12 +4972,12 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
 
     setDataGuru(updatedGuruList);
     setIsJadwalModalOpen(false);
-    alert(`Jadwal harian (Masuk & Pulang) untuk ${selectedGuruJadwal.nama} berhasil disimpan!`);
+    alert(`Jadwal harian untuk ${selectedGuruJadwal.nama} berhasil disimpan ke cloud!`);
   };
 
-  // FUNGSI BARU: TERAPKAN JAM DEFAULT MASSAL (06.45 - 14.00) UNTUK SEMUA GURU
-  const handleTerapkanDefaultSemuaGuru = () => {
-    if (window.confirm('Apakah Anda yakin ingin menerapkan jadwal default (Masuk: 06.45, Pulang: 14.00, Senin-Jumat) ke SEMUA guru secara serentak?')) {
+  // FUNGSI: TERAPKAN JAM DEFAULT MASSAL (06.45 - 14.00) UNTUK SEMUA GURU
+  const handleTerapkanDefaultSemuaGuru = async () => {
+    if (window.confirm('Apakah Anda yakin ingin menerapkan jadwal default (Masuk: 06.45, Pulang: 14.00, Senin-Jumat) ke SEMUA guru secara serentak ke cloud?')) {
       const defaultJadwalMasal = {
         Senin: { aktif: true, jamMulai: '06:45', jamSelesai: '14:00' },
         Selasa: { aktif: true, jamMulai: '06:45', jamSelesai: '14:00' },
@@ -4664,13 +4986,21 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
         Jumat: { aktif: true, jamMulai: '06:45', jamSelesai: '14:00' },
       };
 
+      // Update massal ke Supabase untuk semua guru
+      for (let guru of dataGuru) {
+        await supabase
+          .from('guru')
+          .update({ jadwal_mengajar: defaultJadwalMasal })
+          .eq('id', guru.id);
+      }
+
       const updatedGuruList = dataGuru.map(g => ({
         ...g,
         jadwalMengajar: defaultJadwalMasal
       }));
 
       setDataGuru(updatedGuruList);
-      alert('Berhasil! Seluruh jadwal guru telah diset serentak ke jam 06.45 - 14.00.');
+      alert('Berhasil! Seluruh jadwal guru telah diset serentak ke jam 06.45 - 14.00 di cloud.');
     }
   };
 
@@ -4703,7 +5033,7 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
           <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100 text-gray-800'} p-6 rounded-xl shadow-sm border flex flex-col md:flex-row justify-between items-center gap-4`}>
             <div>
               <h3 className="text-xl font-bold flex items-center gap-2"><Clock className="text-blue-600"/> Pengaturan 3 Mode Jam Sekolah</h3>
-              <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Pilih mode operasional yang sedang berjalan dan sesuaikan jam masuk/pulang.</p>
+              <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Pilih mode operasional yang sedang berjalan dan sesuaikan jam masuk/pulang (Tersinkronisasi Cloud).</p>
             </div>
             <div className="w-full md:w-auto">
               <label className={`block text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-500'} uppercase tracking-wider mb-1`}>Pilih Mode Aktif Saat Ini</label>
@@ -4779,14 +5109,14 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
 
             <div className="md:col-span-3">
               <button type="submit" className="w-full bg-blue-600 text-white font-medium py-3.5 rounded-xl hover:bg-blue-700 transition shadow cursor-pointer">
-                Simpan & Terapkan Pengaturan Jam Siswa
+                Simpan & Terapkan Pengaturan Jam Siswa ke Cloud
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* KONTEN 2: PENGATURAN JADWAL MENGAJAR GURU (TERURUT ABJAD A-Z) */}
+      {/* KONTEN 2: PENGATURAN JADWAL MENGAJAR GURU */}
       {subTab === 'guru' && (
         <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100 text-gray-800'} p-6 rounded-xl shadow-sm border space-y-4`}>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -4795,7 +5125,6 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
               <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Atur jam mulai dan jam selesai mengajar harian (Senin - Jumat) untuk masing-masing guru.</p>
             </div>
             
-            {/* TOMBOL AKSI MASSAL DEFAULT 06.45 - 14.00 */}
             <button 
               onClick={handleTerapkanDefaultSemuaGuru}
               className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold cursor-pointer shadow transition flex items-center gap-2 whitespace-nowrap"
@@ -4929,7 +5258,7 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
 
               <div className={`p-4 border-t ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-gray-50'} flex justify-end gap-3`}>
                 <button type="button" onClick={() => setIsJadwalModalOpen(false)} className="px-4 py-2 rounded-lg text-sm cursor-pointer">Batal</button>
-                <button type="submit" className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium cursor-pointer shadow">Simpan Jadwal</button>
+                <button type="submit" className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium cursor-pointer shadow">Simpan Jadwal ke Cloud</button>
               </div>
             </form>
           </div>
@@ -4980,14 +5309,41 @@ const KontenPengaturanUmum = ({ infoSekolah, setInfoSekolah, adminCredential, se
     }
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    setInfoSekolah({
+
+    const dataBaruSekolah = {
       nama: namaSekolah,
       alamat: alamatSekolah,
       logo: logoPreview,
       pengumuman: pengumuman
-    });
+    };
+
+    // 1. Simpan ke Database Cloud Supabase secara Real-time
+    try {
+      // Kita ambil dulu data pengaturan yang ada di Supabase untuk tahu ID-nya
+      const { data: existingData } = await supabase.from('pengaturan').select('id').limit(1);
+      
+      const targetId = existingData && existingData.length > 0 ? existingData[0].id : 1;
+
+      const { error } = await supabase
+        .from('pengaturan')
+        .upsert({ 
+          id: targetId, // Menggunakan ID yang sedang aktif di database (misal ID 2)
+          ...dataBaruSekolah 
+        });
+
+      if (error) {
+        console.error('Gagal menyimpan ke Supabase:', error.message);
+        alert('Gagal menyinkronkan pengaturan ke cloud Supabase: ' + error.message);
+        return;
+      }
+    } catch (err) {
+      console.error('Error Supabase:', err);
+    }
+
+    // 2. Perbarui State Lokal & LocalStorage
+    setInfoSekolah(dataBaruSekolah);
     setAdminCredential({ username: newUsername, password: newPassword });
     
     // Simpan pengaturan audio lengkap dengan kartu tidak dikenal
@@ -5001,7 +5357,7 @@ const KontenPengaturanUmum = ({ infoSekolah, setInfoSekolah, adminCredential, se
       });
     }
 
-    alert('Pengaturan umum sekolah, akun admin, dan audio piket berhasil diperbarui!');
+    alert('Pengaturan umum sekolah berhasil disimpan ke Supabase & lokal!');
   };
 
   return (
@@ -6186,12 +6542,17 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
           statusTP: updatedStatusTP
         };
 
-        const { error } = await supabase.from('siswa').update(updatedData).eq('id', editingId);
+        const { error } = await supabase
+          .from('siswa')
+          .update(updatedData)
+          .eq('id', editingId);
+
         if (error) {
-          alert('Gagal memperbarui di Supabase: ' + error.message);
+          alert('Gagal memperbarui data: ' + error.message);
           return;
         }
-
+        
+        // Refresh state lokal agar tabel langsung terupdate
         setDataSiswa(dataSiswa.map(item => item.id === editingId ? { ...item, ...updatedData } : item));
       }
     }
@@ -6232,40 +6593,60 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
 
       let importedCount = 0;
       if (activeTab === 'siswa') {
-        const newSiswaList = [...dataSiswa];
         const newMasterClasses = [...daftarMasterKelas];
+        const batchSiswaToInsert = [];
 
         for (let i = 1; i < lines.length; i++) {
           const cols = lines[i].split(delimiter).map(c => c.trim().replace(/^"|"$/g, ''));
-          if (cols.length >= 5) {
-            const [nama, nisn, rawKelas, keahlian, rfid] = cols;
-            const kelas = rawKelas ? rawKelas.trim().toUpperCase() : '';
-            
-            if (kelas && !newMasterClasses.some(k => k.nama.trim().toUpperCase() === kelas)) {
-              newMasterClasses.push({ nama: kelas, keahlian: keahlian || 'Konsentrasi Umum' });
+          
+          // Lewati jika baris benar-benar kosong total
+          if (cols.length === 0 || !cols[0]) continue;
+
+          // Lewati jika baris adalah header (mengandung kata 'nama' atau 'nisn')
+          const firstColLower = cols[0].toLowerCase();
+          if (firstColLower === 'nama' || firstColLower.includes('nisn')) continue;
+
+          const nama = cols[0];
+          const nisn = cols[1] || '';
+          const kelas = (cols[2] || '').trim().toUpperCase(); // Kolom C = Kelas (X TITL)
+          const keahlian = cols[3] || 'Konsentrasi Umum';
+          const rfid = cols[4] || '';
+
+          if (kelas && !newMasterClasses.some(k => k.nama.trim().toUpperCase() === kelas)) {
+            newMasterClasses.push({ nama: kelas, keahlian: keahlian });
+          }
+
+          const autoFoto = typeof getAvatarUrl === 'function' ? getAvatarUrl(nama) : `https://ui-avatars.com/api/?name=${encodeURIComponent(nama)}`;
+          const generatedRfid = (rfid && rfid !== 'RFID' && rfid !== '') ? rfid.toUpperCase() : (nisn ? `NISN-${nisn}` : `ID-${Date.now() + i}`);
+
+         batchSiswaToInsert.push({
+            nama,
+            nisn,
+            rfid: generatedRfid,
+            foto: autoFoto,
+            kelasPerTP: {
+              [tahunPelajaranAktif]: kelas
+            },
+            statusTP: {
+              [tahunPelajaranAktif]: 'Aktif'
             }
+          });
+        }
 
-            const autoFoto = getAvatarUrl(nama);
-            const generatedRfid = (rfid && rfid !== 'RFID') ? rfid.toUpperCase() : (nisn ? `NISN-${nisn}` : `ID-${Date.now() + i}`);
-
-            const payloadSiswa = {
-              nama,
-              nisn: nisn || '',
-              rfid: generatedRfid,
-              foto: autoFoto,
-              kelasPerTP: { [tahunPelajaranAktif]: kelas },
-              statusTP: { [tahunPelajaranAktif]: 'Aktif' }
-            };
-
-            const { data } = await supabase.from('siswa').insert([payloadSiswa]).select();
-            if (data && data.length > 0) {
-              newSiswaList.unshift(data[0]);
-            }
-            importedCount++;
+        // Bulk insert supaya prosesnya kilat dan langsung masuk Supabase
+       if (batchSiswaToInsert.length > 0) {
+          const { data, error } = await supabase.from('siswa').insert(batchSiswaToInsert).select();
+          if (error) {
+            alert('Gagal import massal ke Supabase: ' + error.message);
+            return;
+          }
+          if (data) {
+            // Gabungkan data dari Supabase langsung ke state lokal tabel aplikasi
+            setDataSiswa(prevSiswa => [...data, ...prevSiswa]);
+            setDaftarMasterKelas(newMasterClasses);
+            alert(`Berhasil mengimpor ${data.length} data siswa secara massal!`);
           }
         }
-        setDataSiswa(newSiswaList);
-        setDaftarMasterKelas(newMasterClasses);
       } else {
         const newGuruList = [...dataGuru];
         for (let i = 1; i < lines.length; i++) {
@@ -6291,7 +6672,7 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
 
           if (cols.length >= 4) {
             const [nama, kodeGuru, jabatan, rfid] = cols;
-            const autoFoto = getAvatarUrl(nama || 'Guru');
+            const autoFoto = typeof getAvatarUrl === 'function' ? getAvatarUrl(nama || 'Guru') : `https://ui-avatars.com/api/?name=Guru`;
             const finalKodeGuru = kodeGuru || `GURU-${Date.now()}`;
             const finalRfid = (rfid && rfid !== 'RFID') ? rfid.toUpperCase() : `KODE-${finalKodeGuru}`;
 
@@ -6313,7 +6694,6 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
         setDataGuru(newGuruList);
       }
 
-      alert(`Berhasil mengimpor ${importedCount} data ke Supabase!`);
       e.target.value = null;
     };
     reader.readAsText(file);
@@ -6322,13 +6702,27 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
   const currentData = activeTab === 'guru' 
     ? dataGuru 
     : dataSiswa.map(s => {
-        const kelasSiswa = (s.kelasPerTP?.[tahunPelajaranAktif] || 'Belum diatur').trim().toUpperCase();
+        // Amankan kelasPerTP (ubah dari teks string ke objek JSON jika perlu)
+        let kelasObj = s.kelasPerTP;
+        if (typeof kelasObj === 'string') {
+          try { kelasObj = JSON.parse(kelasObj); } catch (e) { kelasObj = {}; }
+        }
+        const kelasSiswa = (kelasObj?.[tahunPelajaranAktif] || 'Belum diatur').trim().toUpperCase();
+
+        // Amankan statusTP
+        let statusObj = s.statusTP;
+        if (typeof statusObj === 'string') {
+          try { statusObj = JSON.parse(statusObj); } catch (e) { statusObj = {}; }
+        }
+        const statusAktifTP = statusObj?.[tahunPelajaranAktif] || 'Belum Terdaftar';
+
         const foundMaster = daftarMasterKelas.find(k => k.nama.trim().toUpperCase() === kelasSiswa);
+        
         return {
           ...s,
           jabatan_kelas: kelasSiswa,
           programKeahlian: foundMaster ? foundMaster.keahlian : 'Belum diatur',
-          statusAktifTP: s.statusTP?.[tahunPelajaranAktif] || 'Belum Terdaftar'
+          statusAktifTP: statusAktifTP
         };
       });
  
