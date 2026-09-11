@@ -6741,66 +6741,62 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
 
   const isAllSelected = filteredData.length > 0 && filteredData.every(item => selectedIds.includes(item.id));
 
-  return (
-    <div className="flex flex-col h-full space-y-6">
-      <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100 text-gray-800'} p-4 rounded-xl shadow-sm border flex flex-col md:flex-row items-center justify-between gap-4`}>
-        <div className={`flex ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border'} p-1 rounded-full`}>
-          <button onClick={() => { setActiveTab('siswa'); setSelectedKelasFilter('Semua'); }} className={`px-6 py-2 rounded-full text-sm font-medium transition cursor-pointer ${activeTab === 'siswa' ? `${isDarkMode ? 'bg-slate-900 text-blue-400' : 'bg-white text-blue-600'} shadow-sm` : 'opacity-60'}`}>Siswa</button>
-          <button onClick={() => setActiveTab('guru')} className={`px-6 py-2 rounded-full text-sm font-medium transition cursor-pointer ${activeTab === 'guru' ? `${isDarkMode ? 'bg-slate-900 text-blue-400' : 'bg-white text-blue-600'} shadow-sm` : 'opacity-60'}`}>Guru & Staff</button>
+ return (
+    <div className="flex flex-col h-full space-y-4">
+      {/* BAGIAN ATAS / FILTER & TOMBOL AKSI (Diringkas agar muat di HP) */}
+      <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100 text-gray-800'} p-3 rounded-xl shadow-sm border flex flex-col gap-3`}>
+        
+        {/* Baris 1: Tab Pilihan (Siswa / Guru) & Tombol Tambah HP */}
+        <div className="flex items-center justify-between">
+          <div className={`flex ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border'} p-1 rounded-full`}>
+            <button onClick={() => { setActiveTab('siswa'); setSelectedKelasFilter('Semua'); }} className={`px-5 py-1.5 rounded-full text-xs font-medium transition cursor-pointer ${activeTab === 'siswa' ? `${isDarkMode ? 'bg-slate-900 text-blue-400' : 'bg-white text-blue-600'} shadow-sm` : 'opacity-60'}`}>Siswa</button>
+            <button onClick={() => setActiveTab('guru')} className={`px-5 py-1.5 rounded-full text-xs font-medium transition cursor-pointer ${activeTab === 'guru' ? `${isDarkMode ? 'bg-slate-900 text-blue-400' : 'bg-white text-blue-600'} shadow-sm` : 'opacity-60'}`}>Guru & Staff</button>
+          </div>
+
+          <button onClick={handleOpenAdd} className="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-1 text-xs font-semibold cursor-pointer shadow transition md:hidden"><Plus size={15} /> Tambah</button>
         </div>
 
-        <div className="flex flex-wrap items-center w-full md:w-auto gap-3">
+        {/* Baris 2: Filter & Tombol Lainnya (Bisa digeser ke samping di HP) */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
           {selectedIds.length > 0 && (
-            <button 
-              onClick={handleBulkDelete}
-              className="bg-red-600 hover:bg-red-700 text-white px-3 py-2.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold cursor-pointer shadow transition animate-pulse"
-            >
-              <Trash2 size={15} /> Hapus Terpilih ({selectedIds.length})
+            <button onClick={handleBulkDelete} className="bg-red-600 text-white px-3 py-2 rounded-lg flex items-center gap-1 text-xs font-semibold cursor-pointer shadow transition flex-shrink-0">
+              <Trash2 size={14} /> Hapus ({selectedIds.length})
             </button>
           )}
 
           {activeTab === 'siswa' && (
             <>
-              <button 
-                onClick={() => setIsKelasModalOpen(true)} 
-                className={`px-3 py-2.5 rounded-lg border flex items-center gap-1.5 text-xs font-semibold transition cursor-pointer ${isDarkMode ? 'bg-slate-800 border-slate-700 text-blue-400 hover:bg-slate-700' : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100'}`}
-              >
-                <Layers size={15} /> Kelola Kelas & Kejuruan ({daftarMasterKelas.length})
+              <button onClick={() => setIsKelasModalOpen(true)} className={`px-3 py-2 rounded-lg border flex items-center gap-1 text-xs font-semibold transition cursor-pointer flex-shrink-0 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-blue-400' : 'bg-blue-50 border-blue-200 text-blue-600'}`}>
+                <Layers size={14} /> Kelola Kelas
               </button>
 
-              <select 
-                value={selectedKelasFilter} 
-                onChange={(e) => setSelectedKelasFilter(e.target.value)} 
-                className={`px-4 py-2 border rounded-lg text-sm ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white'}`}
-              >
+              <select value={selectedKelasFilter} onChange={(e) => setSelectedKelasFilter(e.target.value)} className={`px-3 py-2 border rounded-lg text-xs flex-shrink-0 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white'}`}>
                 {daftarNamaKelasFilter.map(k => <option key={k} value={k} className="bg-slate-900 text-white">Kelas: {k}</option>)}
               </select>
             </>
           )}
           
-          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={`px-4 py-2 border rounded-lg text-sm ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : ''}`} placeholder="Cari nama, NISN, Kode Guru, RFID..." />
+          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={`px-3 py-2 border rounded-lg text-xs min-w-[160px] flex-1 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : ''}`} placeholder="Cari nama, NISN, RFID..." />
           
-          <button 
-            onClick={handleDownloadTemplate} 
-            className={`px-3 py-2.5 rounded-lg border flex items-center gap-1.5 text-xs font-semibold transition cursor-pointer ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'}`}
-          >
-            <Download size={15} /> Template CSV
+          <button onClick={handleDownloadTemplate} className={`px-3 py-2 rounded-lg border flex items-center gap-1 text-xs font-semibold transition cursor-pointer flex-shrink-0 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>
+            <Download size={14} /> Template
           </button>
 
-          <label className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold cursor-pointer shadow transition">
-            <Upload size={15} /> Import Massal
+          <label className="bg-emerald-600 text-white px-3 py-2 rounded-lg flex items-center gap-1 text-xs font-semibold cursor-pointer shadow transition flex-shrink-0">
+            <Upload size={14} /> Import
             <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" />
           </label>
 
-          <button onClick={handleOpenAdd} className="bg-blue-600 text-white px-4 py-2.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold cursor-pointer shadow transition"><Plus size={16} /> Tambah</button>
+          <button onClick={handleOpenAdd} className="bg-blue-600 text-white px-3 py-2 rounded-lg hidden md:flex items-center gap-1 text-xs font-semibold cursor-pointer shadow transition flex-shrink-0"><Plus size={15} /> Tambah</button>
         </div>
       </div>
 
-      <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100'} rounded-xl shadow-sm border flex-1 overflow-y-auto max-h-[calc(100vh-280px)] p-2`}>
+      {/* BAGIAN TABEL DATA UTAMA */}
+      <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100'} rounded-xl shadow-sm border flex-1 overflow-y-auto max-h-[calc(100vh-200px)] p-1`}>
         <table className="w-full text-left border-collapse">
           <thead className="sticky top-0 z-10">
             <tr className={`${isDarkMode ? 'bg-slate-900 text-slate-300 border-slate-800' : 'bg-gray-100 text-gray-700'} border-b text-xs uppercase shadow-sm`}>
-              <th className="px-4 py-4 w-12 text-center">
+              <th className="px-3 py-3 w-10 text-center">
                 <input 
                   type="checkbox"
                   checked={isAllSelected}
@@ -6808,17 +6804,17 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
                   className="rounded cursor-pointer w-4 h-4 text-blue-600 focus:ring-blue-500"
                 />
               </th>
-              <th className="px-4 py-4">No.</th>
-              <th className="px-6 py-4">Foto & Nama</th>
-              {activeTab === 'siswa' && <th className="px-6 py-4">NISN</th>}
-              {activeTab === 'guru' && <th className="px-6 py-4">Kode Guru</th>}
-              <th className="px-6 py-4">{activeTab === 'guru' ? 'Jabatan' : `Kelas & Kejuruan`}</th>
-              {activeTab === 'siswa' && <th className="px-6 py-4">Status TP</th>}
-              <th className="px-6 py-4">RFID / QR</th>
-              <th className="px-6 py-4 text-right">Aksi</th>
+              <th className="px-3 py-3">No.</th>
+              <th className="px-4 py-3">Foto & Nama</th>
+              {activeTab === 'siswa' && <th className="px-4 py-3">NISN</th>}
+              {activeTab === 'guru' && <th className="px-4 py-3">Kode Guru</th>}
+              <th className="px-4 py-3">{activeTab === 'guru' ? 'Jabatan' : `Kelas & Kejuruan`}</th>
+              {activeTab === 'siswa' && <th className="px-4 py-3">Status TP</th>}
+              <th className="px-4 py-3">RFID / QR</th>
+              <th className="px-4 py-3 text-right">Aksi</th>
             </tr>
           </thead>
-          <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800' : 'divide-gray-100'} text-sm`}>
+          <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800' : 'divide-gray-100'} text-xs md:text-sm`}>
             {filteredData.length > 0 ? (
               filteredData.map((item, idx) => {
                 const isChecked = selectedIds.includes(item.id);
@@ -6827,7 +6823,7 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
 
                 return (
                   <tr key={item.id} className={`${isDarkMode ? (isChecked ? 'bg-slate-800/90' : 'hover:bg-slate-800/50') : (isChecked ? 'bg-blue-50/60' : 'hover:bg-gray-50')} transition-colors`}>
-                    <td className="px-4 py-4 text-center">
+                    <td className="px-3 py-3 text-center">
                       <input 
                         type="checkbox"
                         checked={isChecked}
@@ -6835,43 +6831,43 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
                         className="rounded cursor-pointer w-4 h-4 text-blue-600 focus:ring-blue-500"
                       />
                     </td>
-                    <td className="px-4 py-4">{idx + 1}</td>
-                    <td className="px-6 py-4 flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full border border-blue-500 bg-slate-800 overflow-hidden flex-shrink-0 shadow">
+                    <td className="px-3 py-3">{idx + 1}</td>
+                    <td className="px-4 py-3 flex items-center gap-2">
+                      <div className="w-8 h-8 md:w-10 md:h-10 rounded-full border border-blue-500 bg-slate-800 overflow-hidden flex-shrink-0 shadow">
                         <img src={avatarSrc} alt="Foto" className="w-full h-full object-cover" />
                       </div>
-                      <span className="font-bold">{item.nama}</span>
+                      <span className="font-bold text-xs md:text-sm line-clamp-1">{item.nama}</span>
                     </td>
                     {activeTab === 'siswa' && (
-                      <td className="px-6 py-4 font-mono text-xs font-semibold text-slate-400">
+                      <td className="px-4 py-3 font-mono text-[11px] font-semibold text-slate-400">
                         {item.nisn || '-'}
                       </td>
                     )}
                     {activeTab === 'guru' && (
-                      <td className="px-6 py-4 font-mono text-xs font-semibold text-blue-400">
+                      <td className="px-4 py-3 font-mono text-[11px] font-semibold text-blue-400">
                         {item.kodeGuru || '-'}
                       </td>
                     )}
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <div className="font-semibold text-blue-500">{item.jabatan_kelas}</div>
                       {activeTab === 'siswa' && (
-                        <div className="text-[11px] text-slate-400 font-medium">{item.programKeahlian}</div>
+                        <div className="text-[10px] text-slate-400 font-medium">{item.programKeahlian}</div>
                       )}
                     </td>
                     {activeTab === 'siswa' && (
-                      <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] md:text-xs font-bold ${
                           item.statusAktifTP === 'Aktif' ? 'bg-green-500/10 text-green-400 border border-green-500/30' : 'bg-red-500/10 text-red-400 border border-red-500/30'
                         }`}>
                           {item.statusAktifTP}
                         </span>
                       </td>
                     )}
-                    <td className="px-6 py-4 font-mono text-xs">{item.rfid}</td>
-                    <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
-                      <button onClick={() => setSelectedPersonHistory(item)} title="Lihat Riwayat" className={`p-1.5 ${isDarkMode ? 'bg-blue-950 text-blue-300 hover:bg-blue-900' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'} rounded-lg transition cursor-pointer`}><Eye size={18} /></button>
-                      <button onClick={() => handleOpenEdit(item)} className="p-1.5 text-gray-400 hover:text-blue-500 rounded-lg transition cursor-pointer"><Pencil size={18} /></button>
-                      <button onClick={() => handleDelete(item.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg transition cursor-pointer"><Trash2 size={18} /></button>
+                    <td className="px-4 py-3 font-mono text-[11px]">{item.rfid}</td>
+                    <td className="px-4 py-3 text-right flex items-center justify-end gap-1.5">
+                      <button onClick={() => setSelectedPersonHistory(item)} title="Lihat Riwayat" className={`p-1.5 ${isDarkMode ? 'bg-blue-950 text-blue-300 hover:bg-blue-900' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'} rounded-lg transition cursor-pointer`}><Eye size={16} /></button>
+                      <button onClick={() => handleOpenEdit(item)} className="p-1.5 text-gray-400 hover:text-blue-500 rounded-lg transition cursor-pointer"><Pencil size={16} /></button>
+                      <button onClick={() => handleDelete(item.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg transition cursor-pointer"><Trash2 size={16} /></button>
                     </td>
                   </tr>
                 );
