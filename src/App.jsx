@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Menu, MenuItem, Search, BarChart2, Users, Clock, Settings,
-  BookOpen, CreditCard, School, ArrowLeft, Plus, X, CheckCircle, Pencil, Trash2, Download, ShieldCheck, Printer, Tv, 
+  Menu, Search, BarChart2, Users, Clock, Settings, 
+  BookOpen, CreditCard, School, ArrowLeft, Plus, X, CheckCircle, Pencil, Trash2, Download, ShieldCheck, Printer, Tv, Eye, AlertTriangle, Archive, FileText, Lock, LogOut, User, Calendar, TrendingUp, PieChart, FileCheck, QrCode, Sun, Moon, Camera, Layers, ArrowUpRight, UserCheck, UserX, RefreshCw, Upload, Volume2 
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -1750,37 +1750,37 @@ const LayarPenuhRFID = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKehad
       `}} />
 
       {/* HEADER ATAS */}
-      <div className={`w-full flex flex-col md:flex-row justify-between items-center gap-4 ${isDarkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-gray-200 shadow-sm'} px-4 md:px-6 py-4 rounded-3xl backdrop-blur-md flex-shrink-0`}>
-        <div className="flex items-center gap-2 w-full md:w-auto justify-center md:justify-start">
-          <button onClick={onBack} className={`${isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700' : 'bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300'} border px-3 py-2 rounded-xl flex items-center gap-1.5 transition cursor-pointer text-xs font-bold`}>
-            <ArrowLeft size={16} /> Keluar
+      <div className={`w-full flex justify-between items-center ${isDarkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-gray-200 shadow-sm'} px-6 py-4 rounded-3xl backdrop-blur-md flex-shrink-0`}>
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className={`${isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700' : 'bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300'} border px-4 py-2.5 rounded-2xl flex items-center gap-2 transition cursor-pointer text-sm font-bold`}>
+            <ArrowLeft size={18} /> Keluar
           </button>
-          <button onClick={toggleFullscreen} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl flex items-center gap-1.5 transition cursor-pointer text-xs font-bold shadow">
+          <button onClick={toggleFullscreen} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-2xl flex items-center gap-2 transition cursor-pointer text-sm font-bold shadow">
             {isFullscreen ? 'Keluar Fullscreen' : 'Fullscreen'}
           </button>
         </div>
 
-        <div className="text-center space-y-0.5">
-          <h1 className="text-xs md:text-sm font-extrabold tracking-widest uppercase text-blue-500 dark:text-blue-400">DASHBOARD PRESENSI SEKOLAH</h1>
+        <div className="text-center space-y-1">
+          <h1 className="text-base md:text-lg font-extrabold tracking-widest uppercase text-blue-500 dark:text-blue-400">DASHBOARD PRESENSI SEKOLAH</h1>
           <div className="flex flex-col items-center">
-            <h2 className="text-sm md:text-lg font-black tracking-wide">
+            <h2 className="text-lg md:text-xl font-black tracking-wide">
               {infoSekolah?.nama || <span className="text-rose-500 italic font-semibold">Nama Sekolah Belum Diatur</span>}
             </h2>
-            <p className="text-[11px] md:text-xs font-medium opacity-90 line-clamp-1">
+            <p className="text-xs md:text-sm font-medium opacity-90">
               {infoSekolah?.alamat || <span className="text-amber-500 italic">Alamat Sekolah Belum Diatur</span>}
             </p>
           </div>
-          <p className="text-[11px] text-emerald-500 dark:text-emerald-400 font-mono font-bold">
+          <p className="text-xs md:text-sm text-emerald-500 dark:text-emerald-400 font-mono font-bold pt-0.5">
             TP: {tahunPelajaranAktif} &bull; Mode: {pengaturanJam?.modeAktif || 'Pagi'}
           </p>
         </div>
 
-        <div className={`text-center md:text-right ${isDarkMode ? 'bg-slate-950/80 border-slate-800' : 'bg-gray-50 border-gray-200'} border px-4 py-2 rounded-xl w-full md:w-auto`}>
-          <p className="text-xs font-bold">{new Date().toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</p>
-          <p className="text-[11px] opacity-80">Petugas: <strong className="text-emerald-500">Admin Piket</strong></p>
+        <div className={`text-right ${isDarkMode ? 'bg-slate-950/80 border-slate-800' : 'bg-gray-50 border-gray-200'} border px-5 py-2.5 rounded-2xl`}>
+          <p className="text-sm font-bold">{new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+          <p className="text-xs opacity-80 pt-0.5">Petugas: <strong className="text-emerald-500 text-sm">Admin Piket</strong></p>
         </div>
       </div>
-      
+
       {toastNotif && (
         <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-2xl text-xs font-bold shadow-2xl transition-all animate-bounce ${
           toastNotif.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
@@ -3514,42 +3514,40 @@ const KontenJadwalPiket = ({ jadwalPiket, setJadwalPiket, daftarGuru, isDarkMode
         </div>
       </div>
 
-      <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100'} rounded-xl shadow-sm border overflow-hidden`}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[550px]">
-            <thead>
-              <tr className={`${isDarkMode ? 'bg-slate-800/60 text-slate-400 border-slate-800' : 'bg-gray-50 text-gray-500'} text-xs uppercase border-b`}>
-                <th className="px-4 py-3">Hari</th>
-                <th className="px-4 py-3">Petugas Piket 1</th>
-                <th className="px-4 py-3">Petugas Piket 2</th>
-                <th className="px-4 py-3 text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800' : 'divide-gray-100'} text-xs md:text-sm`}>
-              {jadwalPiket && jadwalPiket.length > 0 ? (
-                jadwalPiket.map((item) => (
-                  <tr key={item.id} className={`${isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-gray-50'}`}>
-                    <td className="px-4 py-3 font-bold text-blue-500 w-28">{item.hari}</td>
-                    <td className="px-4 py-3 font-medium">{item.petugas1 || '-'}</td>
-                    <td className="px-4 py-3 font-medium">{item.petugas2 || '-'}</td>
-                    <td className="px-4 py-3 text-right">
-                      <button 
-                        onClick={() => handleOpenEdit(item)} 
-                        className={`px-3 py-1.5 ${isDarkMode ? 'bg-blue-950 text-blue-300 hover:bg-blue-900' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'} rounded-lg font-medium text-xs flex items-center gap-1.5 ml-auto transition cursor-pointer flex-shrink-0`}
-                      >
-                        <Pencil size={14} /> Edit Petugas
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="4" className="text-center py-12 text-gray-400 text-xs italic">Belum ada data jadwal piket di database.</td>
+      <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100'} rounded-xl shadow-sm border overflow-hidden p-2`}>
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className={`${isDarkMode ? 'bg-slate-800/60 text-slate-400 border-slate-800' : 'bg-gray-50 text-gray-500'} text-xs uppercase border-b`}>
+              <th className="px-6 py-4">Hari</th>
+              <th className="px-6 py-4">Petugas Piket 1</th>
+              <th className="px-6 py-4">Petugas Piket 2</th>
+              <th className="px-6 py-4 text-right">Aksi</th>
+            </tr>
+          </thead>
+          <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800' : 'divide-gray-100'} text-sm`}>
+            {jadwalPiket && jadwalPiket.length > 0 ? (
+              jadwalPiket.map((item) => (
+                <tr key={item.id} className={`${isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-gray-50'}`}>
+                  <td className="px-6 py-4 font-bold text-blue-500 w-32">{item.hari}</td>
+                  <td className="px-6 py-4 font-medium">{item.petugas1 || '-'}</td>
+                  <td className="px-6 py-4 font-medium">{item.petugas2 || '-'}</td>
+                  <td className="px-6 py-4 text-right">
+                    <button 
+                      onClick={() => handleOpenEdit(item)} 
+                      className={`px-3 py-1.5 ${isDarkMode ? 'bg-blue-950 text-blue-300 hover:bg-blue-900' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'} rounded-lg font-medium text-xs flex items-center gap-1.5 ml-auto transition cursor-pointer`}
+                    >
+                      <Pencil size={14} /> Edit Petugas
+                    </button>
+                  </td>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="4" className="text-center py-12 text-gray-400 text-xs italic">Belum ada data jadwal piket di database.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
       {/* MODAL EDIT JADWAL PIKET */}
