@@ -180,6 +180,11 @@ export default function DashboardKehadiran() {
       if (jamData && jamData.length > 0) {
         setPengaturanJam(jamData[0]);
       }
+      // --- TAMBAHAN UNTUK MASTER KELAS DARI SUPABASE ---
+      const { data: masterKelasData } = await supabase.from('master_kelas').select('*');
+      if (masterKelasData && masterKelasData.length > 0) {
+        setDaftarMasterKelas(masterKelasData.map(item => ({ nama: item.nama, keahlian: item.keahlian })));
+      }
       // ------------------------------------------------------------------
     };
 
@@ -2891,14 +2896,14 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
         }
       `}} />
 
-      {/* HEADER: KIRI (NAVIGASI & FULLSCREEN), TENGAH (INFO SEKOLAH DIPERBESAR), KANAN (JAM EMAS) */}
-      <div className="flex justify-between items-center border-b border-slate-800 pb-5 px-2">
+     {/* HEADER: KIRI (NAVIGASI & FULLSCREEN), TENGAH (INFO SEKOLAH DIPERBESAR), KANAN (JAM EMAS) */}
+      <div className="flex flex-col lg:flex-row justify-between items-center gap-4 border-b border-slate-800 pb-5 px-2">
         
-        {/* KIRI: TOMBOL KEMBALI & FULLSCREEN */}
-        <div className="flex items-center gap-3">
+        {/* KIRI: TOMBOL KEMBALI & FULLSCREEN (Dibuat lebar penuh di HP) */}
+        <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 w-full lg:w-auto">
           <button 
             onClick={onBack}
-            className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 transition text-sm font-semibold cursor-pointer shadow-md"
+            className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition text-sm font-semibold shadow-md flex-grow lg:flex-grow-0"
           >
             <ArrowLeft size={18} /> Kembali ke Dasbor
           </button>
@@ -2906,7 +2911,7 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
           {!isFullscreen ? (
             <button 
               onClick={enterFullscreen}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg transition cursor-pointer text-sm"
+              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg transition cursor-pointer text-sm flex-grow lg:flex-grow-0"
               title="Tampilkan Layar Penuh untuk TV Lobi"
             >
               <Tv size={18} /> Mode Fullscreen
@@ -2914,7 +2919,7 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
           ) : (
             <button 
               onClick={exitFullscreen}
-              className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg transition cursor-pointer text-sm animate-pulse"
+              className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg transition cursor-pointer text-sm animate-pulse flex-grow lg:flex-grow-0"
               title="Keluar dari Layar Penuh"
             >
               <X size={18} /> Keluar Fullscreen
@@ -2923,15 +2928,15 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
         </div>
 
         {/* TENGAH: INFO SEKOLAH DIPERBESAR */}
-        <div className="flex items-center gap-5 text-center">
-          <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center overflow-hidden shadow-xl shadow-blue-600/40 flex-shrink-0 border-2 border-white/20">
+        <div className="flex items-center gap-4 text-center lg:text-left w-full lg:w-auto justify-center">
+          <div className="w-14 h-14 md:w-16 md:h-16 bg-blue-600 rounded-2xl flex items-center justify-center overflow-hidden shadow-xl shadow-blue-600/40 flex-shrink-0 border-2 border-white/20">
             {infoSekolah.logo ? <img src={infoSekolah.logo} alt="Logo" className="w-full h-full object-cover" /> : <School size={36} />}
           </div>
-          <div className="text-left">
-            <h1 className="text-2xl md:text-3xl font-black tracking-wider uppercase text-blue-400 leading-tight">{infoSekolah.nama}</h1>
-            <p className="text-xs text-slate-300 font-semibold tracking-wide mt-0.5">SISTEM INFORMASI KEHADIRAN DIGITAL &bull; TP {tahunPelajaranAktif}</p>
+          <div>
+            <h1 className="text-xl md:text-3xl font-black tracking-wider uppercase text-blue-400 leading-tight">{infoSekolah.nama}</h1>
+            <p className="text-[11px] md:text-xs text-slate-300 font-semibold tracking-wide mt-0.5">SISTEM INFORMASI KEHADIRAN DIGITAL &bull; TP {tahunPelajaranAktif}</p>
             {infoSekolah.alamat && (
-              <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+              <p className="text-[10px] md:text-xs text-slate-400 mt-1 flex items-center justify-center lg:justify-start gap-1">
                 📍 {infoSekolah.alamat}
               </p>
             )}
@@ -2939,8 +2944,8 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
         </div>
 
         {/* KANAN: JAM DIGITAL KUNING EMAS MENYALA */}
-        <div className="text-right bg-slate-900/90 border border-slate-800 px-6 py-3 rounded-2xl shadow-xl">
-          <div className="text-yellow-400 font-mono font-black text-2xl tracking-wider flex items-center justify-end gap-2">
+        <div className="text-center lg:text-right bg-slate-900/90 border border-slate-800 px-6 py-3 rounded-2xl shadow-xl w-full lg:w-auto">
+          <div className="text-yellow-400 font-mono font-black text-xl md:text-2xl tracking-wider flex items-center justify-center lg:justify-end gap-2">
             <span className="w-3 h-3 rounded-full bg-yellow-400 animate-ping"></span>
             {currentTime.toLocaleTimeString('id-ID')}
           </div>
@@ -6262,14 +6267,7 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
   const [activeTab, setActiveTab] = useState('siswa');
   const [searchQuery, setSearchQuery] = useState('');
   
-  const [daftarMasterKelas, setDaftarMasterKelas] = useState(() => {
-    const saved = localStorage.getItem('daftarMasterKelas');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  useEffect(() => {
-    localStorage.setItem('daftarMasterKelas', JSON.stringify(daftarMasterKelas));
-  }, [daftarMasterKelas]);
+  const [daftarMasterKelas, setDaftarMasterKelas] = useState([]);
 
   const [isKelasModalOpen, setIsKelasModalOpen] = useState(false);
   const [inputNamaKelas, setInputNamaKelas] = useState('');
@@ -6515,7 +6513,8 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
           rfid: finalRfid,
           foto: finalFoto,
           kelasPerTP: initialKelasPerTP,
-          statusTP: initialStatusTP
+          statusTP: initialStatusTP,
+          kejuruan: finalKeahlian
         };
 
         const { data, error } = await supabase.from('siswa').insert([newSiswa]).select();
@@ -6539,7 +6538,8 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
           rfid: finalRfid,
           foto: finalFoto,
           kelasPerTP: updatedKelasPerTP,
-          statusTP: updatedStatusTP
+          statusTP: updatedStatusTP,
+          kejuruan: finalKeahlian
         };
 
         const { error } = await supabase
@@ -6629,7 +6629,8 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
             },
             statusTP: {
               [tahunPelajaranAktif]: 'Aktif'
-            }
+            },
+            kejuruan: keahlian
           });
         }
 
@@ -6718,10 +6719,13 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
 
         const foundMaster = daftarMasterKelas.find(k => k.nama.trim().toUpperCase() === kelasSiswa);
         
+        // Prioritaskan ambil dari kolom s.kejuruan Supabase, fallback ke master, lalu 'Belum diatur'
+        const programKeahlianFinal = s.kejuruan || (foundMaster ? foundMaster.keahlian : 'Belum diatur');
+
         return {
           ...s,
           jabatan_kelas: kelasSiswa,
-          programKeahlian: foundMaster ? foundMaster.keahlian : 'Belum diatur',
+          programKeahlian: programKeahlianFinal,
           statusAktifTP: statusAktifTP
         };
       });
