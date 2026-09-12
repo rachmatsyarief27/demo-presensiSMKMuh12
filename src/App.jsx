@@ -4211,7 +4211,7 @@ const KontenTrenDisiplin = ({ dataPelanggaran, dataSiswa, isDarkMode, tahunPelaj
 
 
 /* ==============================================================
-   9. KOMPONEN PERIZINAN & SURAT SAKIT ONLINE
+   9. KOMPONEN PERIZINAN & SURAT SAKIT ONLINE (RESPONSIF HP & PC)
 ============================================================== */
 const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPerizinan, infoSekolah, isDarkMode, tahunPelajaranAktif }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -4337,7 +4337,7 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
     : currentPerizinan.filter(p => p.kelas.toLowerCase() === selectedKelasFilter.toLowerCase());
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="flex flex-col h-full space-y-4 overflow-y-auto pb-6">
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           body * { visibility: hidden; }
@@ -4351,20 +4351,21 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
         }
       `}} />
 
-      <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100 text-gray-800'} p-6 rounded-xl shadow-sm border flex flex-col md:flex-row justify-between items-center gap-4 no-print`}>
+      {/* HEADER KONTROL & FILTER */}
+      <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100 text-gray-800'} p-4 md:p-6 rounded-xl shadow-sm border flex flex-col md:flex-row justify-between items-center gap-4 no-print`}>
         <div>
-          <h3 className="text-xl font-bold flex items-center gap-2">
-            <FileCheck className="text-blue-600" /> Modul Perizinan & Surat Sakit Online ({tahunPelajaranAktif})
+          <h3 className="text-lg md:text-xl font-bold flex items-center gap-2">
+            <FileCheck className="text-blue-600 flex-shrink-0" /> Modul Perizinan & Surat Sakit Online ({tahunPelajaranAktif})
           </h3>
-          <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Kelola dan pantau siswa yang izin keluar gerbang di tengah jam pelajaran secara real-time cloud.</p>
+          <p className={`text-xs md:text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'} mt-1`}>Kelola dan pantau siswa yang izin keluar gerbang di tengah jam pelajaran secara real-time cloud.</p>
         </div>
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-between md:justify-end">
           <div className="flex items-center gap-2">
-            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-500'} uppercase tracking-wider`}>Filter Kelas:</span>
+            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-500'} uppercase tracking-wider`}>Filter:</span>
             <select 
               value={selectedKelasFilter} 
               onChange={(e) => setSelectedKelasFilter(e.target.value)} 
-              className={`border px-3 py-2 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-blue-400' : 'bg-blue-50 border-gray-200 text-blue-700'}`}
+              className={`border px-3 py-2 rounded-xl text-xs md:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-blue-400' : 'bg-blue-50 border-gray-200 text-blue-700'}`}
             >
               {daftarKelas.map(k => <option key={k} value={k} className="bg-slate-900 text-white">{k}</option>)}
             </select>
@@ -4375,107 +4376,111 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
               setJenisIzin('');
               setIsModalOpen(true);
             }}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow transition cursor-pointer text-sm whitespace-nowrap"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow transition cursor-pointer text-xs md:text-sm whitespace-nowrap"
           >
-            <Plus size={18} /> Catat Izin Baru
+            <Plus size={16} /> Catat Izin Baru
           </button>
         </div>
       </div>
 
+      {/* TABEL / DAFTAR PERIZINAN */}
       <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100'} rounded-xl shadow-sm border overflow-hidden p-2 no-print`}>
         <div className={`p-4 border-b ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
-          <h4 className="font-bold">Daftar Perizinan & Surat Sakit Aktif ({selectedKelasFilter})</h4>
+          <h4 className="font-bold text-sm">Daftar Perizinan & Surat Sakit Aktif ({selectedKelasFilter})</h4>
         </div>
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className={`${isDarkMode ? 'bg-slate-800/60 text-slate-400 border-slate-800' : 'bg-gray-50 text-gray-500'} text-xs uppercase border-b`}>
-              <th className="px-6 py-4">Tanggal</th>
-              <th className="px-6 py-4">Nama Siswa</th>
-              <th className="px-6 py-4">Kelas</th>
-              <th className="px-6 py-4">Keperluan / Alasan Izin</th>
-              <th className="px-6 py-4">Jam Keluar - Kembali</th>
-              <th className="px-6 py-4">Guru Pemberi Izin</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4 text-right">Aksi</th>
-            </tr>
-          </thead>
-          <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800' : 'divide-gray-100'} text-sm`}>
-            {filteredPerizinan.length > 0 ? (
-              filteredPerizinan.map(item => (
-                <tr key={item.id} className={`${isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-gray-50'}`}>
-                  <td className="px-6 py-4 font-medium">{item.tanggal}</td>
-                  <td className="px-6 py-4 font-bold">{item.nama}</td>
-                  <td className="px-6 py-4">{item.kelas}</td>
-                  <td className="px-6 py-4 font-semibold text-blue-500">{item.jenisIzin}</td>
-                  <td className="px-6 py-4 font-mono text-xs">{item.jamKeluar} &bull; {item.jamKembali}</td>
-                  <td className="px-6 py-4 opacity-80">{item.pemberiIzin}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                      item.status === 'Sedang di Luar' ? 'bg-orange-500/20 text-orange-400 animate-pulse border border-orange-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'
-                    }`}>
-                      {item.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
-                    <button onClick={() => setActiveSuratIzin(item)} title="Download / Cetak Surat Izin" className={`p-1.5 ${isDarkMode ? 'bg-blue-950 text-blue-300 hover:bg-blue-900' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'} rounded-lg transition cursor-pointer`}>
-                      <Printer size={16} />
-                    </button>
-                    {item.status === 'Sedang di Luar' && (
-                      <button onClick={() => handleTandaiKembali(item.id)} className={`px-3 py-1.5 ${isDarkMode ? 'bg-green-950 text-green-300 hover:bg-green-900' : 'bg-green-50 text-green-600 hover:bg-green-100'} rounded-lg text-xs font-semibold transition cursor-pointer`}>
-                        Tandai Kembali
-                      </button>
-                    )}
-                    <button onClick={() => handleDeletePerizinan(item.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg transition cursor-pointer">
-                      <Trash2 size={16} />
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="8" className="text-center py-12 text-gray-400 text-xs italic">Tidak ada data perizinan siswa untuk tahun pelajaran {tahunPelajaranAktif}.</td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[700px]">
+            <thead>
+              <tr className={`${isDarkMode ? 'bg-slate-800/60 text-slate-400 border-slate-800' : 'bg-gray-50 text-gray-500'} text-xs uppercase border-b`}>
+                <th className="px-4 py-3">Tanggal</th>
+                <th className="px-4 py-3">Nama Siswa</th>
+                <th className="px-4 py-3">Kelas</th>
+                <th className="px-4 py-3">Keperluan / Alasan Izin</th>
+                <th className="px-4 py-3">Jam Keluar - Kembali</th>
+                <th className="px-4 py-3">Guru Pemberi Izin</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3 text-right">Aksi</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800' : 'divide-gray-100'} text-xs md:text-sm`}>
+              {filteredPerizinan.length > 0 ? (
+                filteredPerizinan.map(item => (
+                  <tr key={item.id} className={`${isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-gray-50'}`}>
+                    <td className="px-4 py-3 font-medium">{item.tanggal}</td>
+                    <td className="px-4 py-3 font-bold">{item.nama}</td>
+                    <td className="px-4 py-3">{item.kelas}</td>
+                    <td className="px-4 py-3 font-semibold text-blue-500">{item.jenisIzin}</td>
+                    <td className="px-4 py-3 font-mono text-xs">{item.jamKeluar} &bull; {item.jamKembali}</td>
+                    <td className="px-4 py-3 opacity-80">{item.pemberiIzin}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] md:text-xs font-bold ${
+                        item.status === 'Sedang di Luar' ? 'bg-orange-500/20 text-orange-400 animate-pulse border border-orange-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'
+                      }`}>
+                        {item.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right flex items-center justify-end gap-1.5">
+                      <button onClick={() => setActiveSuratIzin(item)} title="Download / Cetak Surat Izin" className={`p-1.5 ${isDarkMode ? 'bg-blue-950 text-blue-300 hover:bg-blue-900' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'} rounded-lg transition cursor-pointer`}>
+                        <Printer size={16} />
+                      </button>
+                      {item.status === 'Sedang di Luar' && (
+                        <button onClick={() => handleTandaiKembali(item.id)} className={`px-2.5 py-1 ${isDarkMode ? 'bg-green-950 text-green-300 hover:bg-green-900' : 'bg-green-50 text-green-600 hover:bg-green-100'} rounded-lg text-xs font-semibold transition cursor-pointer whitespace-nowrap`}>
+                          Tandai Kembali
+                        </button>
+                      )}
+                      <button onClick={() => handleDeletePerizinan(item.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg transition cursor-pointer">
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="8" className="text-center py-12 text-gray-400 text-xs italic">Tidak ada data perizinan siswa untuk tahun pelajaran {tahunPelajaranAktif}.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
+      {/* MODAL PRATINJAU SURAT IZIN */}
       {activeSuratIzin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
           <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white text-gray-800'} w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]`}>
             <div className="bg-blue-600 p-4 text-white flex justify-between items-center no-print">
-              <h3 className="font-bold text-base">Pratinjau Surat Izin Keluar Sekolah</h3>
+              <h3 className="font-bold text-sm md:text-base">Pratinjau Surat Izin Keluar Sekolah</h3>
               <div className="flex items-center gap-2">
                 <button onClick={handlePrintSurat} className="bg-white text-blue-700 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-blue-50 transition cursor-pointer">
-                  <Printer size={14} /> Cetak / Download PDF
+                  <Printer size={14} /> Cetak / PDF
                 </button>
                 <button onClick={() => setActiveSuratIzin(null)} className="text-white/80 hover:text-white p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition cursor-pointer"><X size={18}/></button>
               </div>
             </div>
 
-            <div className="p-6 overflow-y-auto flex-1 bg-gray-50 flex justify-center">
-              <div id="printable-surat-izin" className="bg-white text-gray-800 w-[650px] p-8 shadow-sm rounded-xl space-y-6 border">
+            <div className="p-4 md:p-6 overflow-y-auto flex-1 bg-gray-50 flex justify-center">
+              <div id="printable-surat-izin" className="bg-white text-gray-800 w-full max-w-[650px] p-6 md:p-8 shadow-sm rounded-xl space-y-6 border">
                 <div className="flex items-center justify-between border-b-2 border-gray-800 pb-4">
-                  <div className="w-20 h-20 bg-blue-600 rounded-xl flex items-center justify-center text-white overflow-hidden flex-shrink-0 shadow-sm">
-                    {infoSekolah.logo ? <img src={infoSekolah.logo} alt="Logo" className="w-full h-full object-cover" /> : <School size={40} />}
+                  <div className="w-16 h-16 md:w-20 md:h-20 bg-blue-600 rounded-xl flex items-center justify-center text-white overflow-hidden flex-shrink-0 shadow-sm">
+                    {infoSekolah.logo ? <img src={infoSekolah.logo} alt="Logo" className="w-full h-full object-cover" /> : <School size={36} />}
                   </div>
-                  <div className="text-center flex-1 px-4">
-                    <h3 className="font-black text-xl uppercase tracking-wider">{infoSekolah.nama}</h3>
-                    <p className="text-[11px] text-gray-700 font-medium mt-0.5">{infoSekolah.alamat}</p>
-                    <p className="text-[10px] text-gray-500 mt-1">Layanan Administrasi Digital &bull; TP {tahunPelajaranAktif}</p>
+                  <div className="text-center flex-1 px-2">
+                    <h3 className="font-black text-base md:text-xl uppercase tracking-wider">{infoSekolah.nama}</h3>
+                    <p className="text-[10px] md:text-[11px] text-gray-700 font-medium mt-0.5">{infoSekolah.alamat}</p>
+                    <p className="text-[9px] md:text-[10px] text-gray-500 mt-1">Layanan Administrasi Digital &bull; TP {tahunPelajaranAktif}</p>
                   </div>
-                  <div className="w-20 flex-shrink-0 invisible"></div>
+                  <div className="w-16 md:w-20 flex-shrink-0 invisible"></div>
                 </div>
 
                 <div className="text-center space-y-1">
-                  <h4 className="font-bold text-sm underline uppercase">SURAT KETERANGAN IZIN KELUAR LINGKUNGAN SEKOLAH</h4>
-                  <p className="text-xs text-gray-500 font-mono">Nomor: {activeSuratIzin.id}/IZIN-SKS/{new Date().getFullYear()}</p>
+                  <h4 className="font-bold text-xs md:text-sm underline uppercase">SURAT KETERANGAN IZIN KELUAR LINGKUNGAN SEKOLAH</h4>
+                  <p className="text-[11px] text-gray-500 font-mono">Nomor: {activeSuratIzin.id}/IZIN-SKS/{new Date().getFullYear()}</p>
                 </div>
 
                 <div className="text-xs text-gray-700 space-y-3 leading-relaxed">
                   <p>Yang bertanda tangan di bawah ini, Guru Piket <strong>{infoSekolah.nama}</strong>, memberikan izin kepada siswa tersebut di bawah ini:</p>
                   
-                  <div className="bg-gray-50 p-4 rounded-xl border space-y-2">
+                  <div className="bg-gray-50 p-3 md:p-4 rounded-xl border space-y-2">
                     <div className="grid grid-cols-3"><span className="text-gray-500">Nama Siswa:</span><span className="font-bold col-span-2">{activeSuratIzin.nama}</span></div>
                     <div className="grid grid-cols-3"><span className="text-gray-500">Kelas / Jurusan:</span><span className="font-bold col-span-2">{activeSuratIzin.kelas}</span></div>
                     <div className="grid grid-cols-3"><span className="text-gray-500">Keperluan / Alasan:</span><span className="font-bold text-blue-600 col-span-2">{activeSuratIzin.jenisIzin}</span></div>
@@ -4491,14 +4496,14 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
                   <div>
                     <p>Mengetahui,</p>
                     <p className="font-bold">Orang Tua / Wali Murid</p>
-                    <div className="h-16"></div>
-                    <p className="border-t border-gray-400 inline-block px-6 pt-1">( . . . . . . . . . . . . . . . . . . )</p>
+                    <div className="h-12 md:h-16"></div>
+                    <p className="border-t border-gray-400 inline-block px-4 md:px-6 pt-1">( . . . . . . . . . . . . . . . . . . )</p>
                   </div>
                   <div>
                     <p>Dikeluarkan di: {infoSekolah.nama}</p>
                     <p className="font-bold">Guru Piket Pemberi Izin</p>
-                    <div className="h-16"></div>
-                    <p className="border-t border-gray-400 inline-block px-6 pt-1 font-semibold">{activeSuratIzin.pemberiIzin}</p>
+                    <div className="h-12 md:h-16"></div>
+                    <p className="border-t border-gray-400 inline-block px-4 md:px-6 pt-1 font-semibold">{activeSuratIzin.pemberiIzin}</p>
                   </div>
                 </div>
               </div>
@@ -4511,15 +4516,16 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
         </div>
       )}
 
+      {/* MODAL FORM CATAT IZIN BARU */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-          <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white text-gray-800'} w-full max-w-md rounded-2xl shadow-xl overflow-hidden`}>
-            <div className={`flex justify-between p-6 border-b ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
-              <h3 className="font-bold">Form Catat Perizinan / Surat Sakit</h3>
+          <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white text-gray-800'} w-full max-w-md rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col`}>
+            <div className={`flex justify-between p-4 md:p-6 border-b ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
+              <h3 className="font-bold text-sm md:text-base">Form Catat Perizinan / Surat Sakit</h3>
               <button onClick={() => setIsModalOpen(false)} className="cursor-pointer"><X size={20}/></button>
             </div>
-            <form onSubmit={handleAddPerizinan}>
-              <div className="p-6 space-y-4">
+            <form onSubmit={handleAddPerizinan} className="flex flex-col flex-1 overflow-y-auto">
+              <div className="p-4 md:p-6 space-y-4 flex-1">
                 <div>
                   <label className={`block text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-500'} uppercase tracking-wider mb-1`}>Pilih Kelas</label>
                   <select 
@@ -4613,7 +4619,7 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
                   </select>
                 </div>
               </div>
-              <div className={`p-6 border-t ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-gray-50'} flex justify-end gap-3 rounded-b-2xl`}>
+              <div className={`p-4 md:p-6 border-t ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-gray-50'} flex justify-end gap-3 rounded-b-2xl`}>
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded-lg text-sm cursor-pointer">Batal</button>
                 <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg flex gap-2 text-sm font-medium cursor-pointer"><CheckCircle size={18}/> Simpan Izin</button>
               </div>
