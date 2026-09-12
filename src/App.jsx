@@ -6274,17 +6274,42 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
   
   const [daftarMasterKelas, setDaftarMasterKelas] = useState([]);
 
+  // Auto-Sync & Ambil Master Kelas dari Supabase + Sinkronisasi Otomatis dari Data Siswa
   useEffect(() => {
-    const ambilMasterKelasSupabase = async () => {
-      const { data, error } = await supabase.from('master_kelas').select('*');
-      if (data) {
-        setDaftarMasterKelas(data);
-      } else if (error) {
-        console.log('Gagal memuat master kelas:', error.message);
+    const ambilDanSinkronMasterKelas = async () => {
+      const { data: dataMaster, error } = await supabase.from('master_kelas').select('*');
+      let currentMaster = dataMaster || [];
+
+      // Ambil kelas unik dari data siswa yang aktif saat ini
+      const kelasDariSiswa = dataSiswa.map(s => {
+        let ko = s.kelasPerTP;
+        if (typeof ko === 'string') { try { ko = JSON.parse(ko); } catch(e){ ko = {}; } }
+        return (ko?.[tahunPelajaranAktif] || s.jabatan_kelas || '').trim().toUpperCase();
+      }).filter(Boolean);
+
+      const kelasUnikSiswa = [...new Set(kelasDariSiswa)];
+
+      // Jika ada kelas di data siswa tapi belum ada di master_kelas Supabase, daftarkan otomatis!
+      const kelasBaruUntukDisimpan = [];
+      kelasUnikSiswa.forEach(namaKls => {
+        const sudahAda = currentMaster.some(m => m.nama.trim().toUpperCase() === namaKls);
+        if (!sudahAda && namaKls) {
+          kelasBaruUntukDisimpan.push({ nama: namaKls, keahlian: 'Konsentrasi Keahlian' });
+        }
+      });
+
+      if (kelasBaruUntukDisimpan.length > 0) {
+        const { data: insertedData } = await supabase.from('master_kelas').insert(kelasBaruUntukDisimpan).select();
+        if (insertedData) {
+          currentMaster = [...currentMaster, ...insertedData];
+        }
       }
+
+      setDaftarMasterKelas(currentMaster);
     };
-    ambilMasterKelasSupabase();
-  }, []);
+
+    ambilDanSinkronMasterKelas();
+  }, [dataSiswa, tahunPelajaranAktif]);
 
   const [isKelasModalOpen, setIsKelasModalOpen] = useState(false);
   const [inputNamaKelas, setInputNamaKelas] = useState('');
@@ -6294,7 +6319,18 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [selectedKelasTemplate, setSelectedKelasTemplate] = useState('');
 
-  const daftarNamaKelasFilter = ['Semua', ...new Set(daftarMasterKelas.map(k => k.nama.trim().toUpperCase()))];
+  // Gabungkan master kelas dengan kelas unik dari siswa secara dinamis untuk filter
+  const kelasDariSiswaAktifFilter = dataSiswa.map(s => {
+    let ko = s.kelasPerTP;
+    if (typeof ko === 'string') { try { ko = JSON.parse(ko); } catch(e){ ko = {}; } }
+    return (ko?.[tahunPelajaranAktif] || s.jabatan_kelas || '').trim().toUpperCase();
+  }).filter(Boolean);
+
+  const daftarNamaKelasFilter = ['Semua', ...new Set([
+    ...daftarMasterKelas.map(k => k.nama.trim().toUpperCase()),
+    ...kelasDariSiswaAktifFilter
+  ])].sort();
+
   const [selectedKelasFilter, setSelectedKelasFilter] = useState('Semua');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -6463,7 +6499,7 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
     }
   };
 
-  const handleAddKelasMaster = (e) => {
+  const handleAddKelasMaster = async (e) => {
     e.preventDefault();
     const cleanKelas = inputNamaKelas.trim().toUpperCase();
     const cleanKeahlian = inputKeahlian.trim();
@@ -6474,14 +6510,29 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
       return;
     }
 
-    setDaftarMasterKelas([...daftarMasterKelas, { nama: cleanKelas, keahlian: cleanKeahlian }]);
-    setInputNamaKelas('');
-    setInputKeahlian('');
-    alert(`Kelas "${cleanKelas}" dengan keahlian "${cleanKeahlian}" berhasil ditambahkan!`);
+    // Simpan ke database Supabase
+    const { data, error } = await supabase.from('master_kelas').insert([{ nama: cleanKelas, keahlian: cleanKeahlian }]).select();
+    if (error) {
+      alert('Gagal menyimpan kelas ke Supabase: ' + error.message);
+      return;
+    }
+
+    if (data) {
+      setDaftarMasterKelas([...daftarMasterKelas, data[0]]);
+      setInputNamaKelas('');
+      setInputKeahlian('');
+      alert(`Kelas "${cleanKelas}" dengan keahlian "${cleanKeahlian}" berhasil ditambahkan!`);
+    }
   };
 
-  const handleDeleteKelasMaster = (namaKelasTarget) => {
+  const handleDeleteKelasMaster = async (namaKelasTarget) => {
     if (window.confirm(`Hapus kelas "${namaKelasTarget}" dari daftar master kelas?`)) {
+      const { error } = await supabase.from('master_kelas').delete().eq('nama', namaKelasTarget);
+      if (error) {
+        alert('Gagal menghapus kelas dari Supabase: ' + error.message);
+        return;
+      }
+
       setDaftarMasterKelas(daftarMasterKelas.filter(k => k.nama !== namaKelasTarget));
       if (selectedKelasFilter === namaKelasTarget) setSelectedKelasFilter('Semua');
     }
