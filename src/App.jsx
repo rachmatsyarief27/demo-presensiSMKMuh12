@@ -6282,7 +6282,7 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
     ambilMasterKelasSupabase();
   }, []);
   // -----------------------------
-  
+
   const [isKelasModalOpen, setIsKelasModalOpen] = useState(false);
   const [inputNamaKelas, setInputNamaKelas] = useState('');
   const [inputKeahlian, setInputKeahlian] = useState('');
@@ -6517,6 +6517,11 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
       const finalRfid = cleanRfidInput && cleanRfidInput !== 'RFID' ? cleanRfidInput : (formData.nisn ? `NISN-${formData.nisn.trim()}` : `ID-${Date.now()}`);
       const cleanKelasForm = formData.jabatan_kelas.trim().toUpperCase();
       
+      // --- DEFINISI KEAHLIAN YANG KEMARIN TERLEWAT ---
+      const foundMaster = daftarMasterKelas.find(k => k.nama.trim().toUpperCase() === cleanKelasForm);
+      const finalKeahlian = foundMaster ? foundMaster.keahlian : 'Konsentrasi Umum';
+      // ---------------------------------------------
+      
       if (modalMode === 'add') {
         const initialKelasPerTP = { [tahunPelajaranAktif]: cleanKelasForm };
         const initialStatusTP = { [tahunPelajaranAktif]: 'Aktif' };
@@ -6566,7 +6571,6 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
           return;
         }
         
-        // Refresh state lokal agar tabel langsung terupdate
         setDataSiswa(dataSiswa.map(item => item.id === editingId ? { ...item, ...updatedData } : item));
       }
     }
