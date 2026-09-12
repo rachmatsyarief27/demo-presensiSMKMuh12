@@ -1976,7 +1976,7 @@ const LayarPenuhRFID = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKehad
 };
 
 /* ==============================================================
-   3. KOMPONEN MODE PIKET
+   3. KOMPONEN MODE PIKET (DENGAN TAMPILAN RESPONSIF HP / CARD VIEW)
 ============================================================== */
 const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKehadiran, pengaturanJam, infoSekolah, playBeep, jadwalPiket, isDarkMode, tahunPelajaranAktif, pengaturanAudio }) => {
   const [rfidInput, setRfidInput] = useState('');
@@ -2594,13 +2594,13 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
 
       {/* MODAL REKAP & ABSEN MANUAL */}
       {showModalManual && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className={`w-full max-w-5xl max-h-[90vh] flex flex-col rounded-3xl shadow-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-200 text-gray-800'} overflow-hidden animate-fade-in`}>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-2 md:p-4">
+          <div className={`w-full max-w-5xl max-h-[92vh] flex flex-col rounded-3xl shadow-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-200 text-gray-800'} overflow-hidden animate-fade-in`}>
             
-            <div className="p-5 border-b flex justify-between items-center bg-blue-600 text-white">
+            <div className="p-4 md:p-5 border-b flex justify-between items-center bg-blue-600 text-white">
               <div>
-                <h3 className="text-base font-bold">Rekapitulasi Kehadiran & Absen Manual</h3>
-                <p className="text-xs text-blue-100">Kelola kehadiran harian serta absen pulang untuk Siswa maupun Guru & Staff</p>
+                <h3 className="text-sm md:text-base font-bold">Rekapitulasi Kehadiran & Absen Manual</h3>
+                <p className="text-[11px] md:text-xs text-blue-100">Kelola kehadiran harian serta absen pulang untuk Siswa maupun Guru & Staff</p>
               </div>
               <button 
                 onClick={() => setShowModalManual(false)} 
@@ -2610,7 +2610,7 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
             </div>
 
             {/* TAB PILIHAN: SISWA / GURU */}
-            <div className={`flex border-b px-6 pt-3 gap-4 ${isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-gray-200 bg-gray-50'}`}>
+            <div className={`flex border-b px-4 md:px-6 pt-3 gap-4 ${isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-gray-200 bg-gray-50'}`}>
               <button 
                 onClick={() => setModalTabManual('siswa')} 
                 className={`pb-3 text-xs font-bold border-b-2 transition cursor-pointer px-4 ${modalTabManual === 'siswa' ? 'border-blue-500 text-blue-400' : 'border-transparent opacity-60'}`}>
@@ -2623,17 +2623,17 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
               </button>
             </div>
 
-            <div className="p-6 space-y-4 overflow-y-auto flex-1 text-left">
+            <div className="p-3 md:p-6 space-y-4 overflow-y-auto flex-1 text-left">
               
               {/* KONTEN TAB SISWA */}
               {modalTabManual === 'siswa' && (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
                     <label className="text-xs font-bold uppercase tracking-wider">Pilih Kelas:</label>
                     <select 
                       value={selectedKelasModal} 
                       onChange={(e) => setSelectedKelasModal(e.target.value)}
-                      className={`border p-2.5 rounded-xl text-xs font-semibold ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-gray-50 border-gray-300'}`}
+                      className={`border p-2.5 rounded-xl text-xs font-semibold w-full md:w-auto ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-gray-50 border-gray-300'}`}
                     >
                       <option value="">-- Pilih Kelas --</option>
                       {daftarKelasUnik.map((kls, idx) => (
@@ -2643,71 +2643,135 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
                   </div>
 
                   {selectedKelasModal ? (
-                    <div className="border rounded-2xl overflow-hidden shadow-sm">
-                      <table className="w-full text-left text-xs border-collapse">
-                        <thead className={`${isDarkMode ? 'bg-slate-800 text-slate-200' : 'bg-gray-100 text-gray-700'} uppercase font-bold`}>
-                          <tr>
-                            <th className="p-3">No</th>
-                            <th className="p-3">Nama Siswa</th>
-                            <th className="p-3 text-center">Status Masuk</th>
-                            <th className="p-3 text-center">Jam Pulang</th>
-                            <th className="p-3 text-center">Ubah Keterangan / Absen Pulang</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-700/30">
-                          {dataSiswa
-                            .filter(s => {
-                              let ko = s.kelasPerTP;
-                              if (typeof ko === 'string') { try { ko = JSON.parse(ko); } catch(e){ ko = {}; } }
-                              const klsSiswa = (ko?.[tahunPelajaranAktif] || s.jabatan_kelas || '').trim().toUpperCase();
-                              const statusTpSiswa = s.statusTP?.[tahunPelajaranAktif] || 'Aktif';
-                              return klsSiswa === selectedKelasModal && statusTpSiswa === 'Aktif';
-                            })
-                            .sort((a, b) => a.nama.localeCompare(b.nama))
-                            .map((siswa, idx) => {
-                              const logSiswa = logKehadiran.find(
-                                l => l.role === 'siswa' && l.nama === siswa.nama && l.jabatan_kelas === selectedKelasModal && l.tanggal === tanggalHariIniStr && l.tahunPelajaran === tahunPelajaranAktif
-                              );
-                              const statusHariIni = logSiswa ? logSiswa.status : 'Belum Absen';
-                              const waktuPulangVal = logSiswa ? logSiswa.waktuPulang : null;
-                              const sudahHadir = logSiswa && ['Tepat Waktu', 'Terlambat', 'Hadir'].includes(logSiswa.status);
+                    <div>
+                      {/* TAMPILAN CARD KHUSUS HP (MOBILE) */}
+                      <div className="block md:hidden space-y-3">
+                        {dataSiswa
+                          .filter(s => {
+                            let ko = s.kelasPerTP;
+                            if (typeof ko === 'string') { try { ko = JSON.parse(ko); } catch(e){ ko = {}; } }
+                            const klsSiswa = (ko?.[tahunPelajaranAktif] || s.jabatan_kelas || '').trim().toUpperCase();
+                            const statusTpSiswa = s.statusTP?.[tahunPelajaranAktif] || 'Aktif';
+                            return klsSiswa === selectedKelasModal && statusTpSiswa === 'Aktif';
+                          })
+                          .sort((a, b) => a.nama.localeCompare(b.nama))
+                          .map((siswa, idx) => {
+                            const logSiswa = logKehadiran.find(
+                              l => l.role === 'siswa' && l.nama === siswa.nama && l.jabatan_kelas === selectedKelasModal && l.tanggal === tanggalHariIniStr && l.tahunPelajaran === tahunPelajaranAktif
+                            );
+                            const statusHariIni = logSiswa ? logSiswa.status : 'Belum Absen';
+                            const waktuPulangVal = logSiswa ? logSiswa.waktuPulang : null;
+                            const sudahHadir = logSiswa && ['Tepat Waktu', 'Terlambat', 'Hadir'].includes(logSiswa.status);
 
-                              return (
-                                <tr key={siswa.id || idx} className={`${isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-gray-50'}`}>
-                                  <td className="p-3 font-mono">{idx + 1}</td>
-                                  <td className="p-3 font-bold">{siswa.nama}</td>
-                                  <td className="p-3 text-center">
-                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
-                                      ['Tepat Waktu', 'Hadir'].includes(statusHariIni) ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                                      statusHariIni === 'Terlambat' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
-                                      statusHariIni === 'Sakit' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                                      statusHariIni === 'Izin' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
-                                      statusHariIni === 'Alpa' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
-                                      'bg-gray-500/20 text-gray-400 border border-gray-500/30'
-                                    }`}>
-                                      {statusHariIni}
-                                    </span>
-                                  </td>
-                                  <td className="p-3 text-center font-mono font-bold text-amber-400">
-                                    {waktuPulangVal ? waktuPulangVal : '-'}
-                                  </td>
-                                  <td className="p-3 text-center flex items-center justify-center gap-1.5 flex-wrap">
-                                    <button onClick={() => handleManualStatusChangeSiswa(siswa, 'Hadir')} className="px-2.5 py-1 bg-emerald-600/30 hover:bg-emerald-600 text-emerald-200 hover:text-white rounded-lg font-semibold text-[10px] transition cursor-pointer">Hadir</button>
-                                    <button onClick={() => handleManualStatusChangeSiswa(siswa, 'Sakit')} className="px-2.5 py-1 bg-blue-600/30 hover:bg-blue-600 text-blue-200 hover:text-white rounded-lg font-semibold text-[10px] transition cursor-pointer">Sakit</button>
-                                    <button onClick={() => handleManualStatusChangeSiswa(siswa, 'Izin')} className="px-2.5 py-1 bg-purple-600/30 hover:bg-purple-600 text-purple-200 hover:text-white rounded-lg font-semibold text-[10px] transition cursor-pointer">Izin</button>
-                                    <button onClick={() => handleManualStatusChangeSiswa(siswa, 'Alpa')} className="px-2.5 py-1 bg-rose-600/30 hover:bg-rose-600 text-rose-200 hover:text-white rounded-lg font-semibold text-[10px] transition cursor-pointer">Alpa</button>
-                                    
-                                    {sudahHadir && !waktuPulangVal && (
-                                      <button onClick={() => handleAbsenPulangManual(siswa.nama)} className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[10px] transition cursor-pointer shadow">
-                                        Pulang
-                                      </button>
-                                    )}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                        </tbody>
-                      </table>
+                            return (
+                              <div key={siswa.id || idx} className={`p-3.5 rounded-2xl border space-y-2.5 ${isDarkMode ? 'bg-slate-800/80 border-slate-700' : 'bg-white border-gray-200 shadow-sm'}`}>
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <span className="text-[10px] font-mono text-slate-400">No. {idx + 1}</span>
+                                    <h4 className="font-bold text-sm text-white">{siswa.nama}</h4>
+                                  </div>
+                                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
+                                    ['Tepat Waktu', 'Hadir'].includes(statusHariIni) ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                                    statusHariIni === 'Terlambat' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                                    statusHariIni === 'Sakit' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                                    statusHariIni === 'Izin' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+                                    statusHariIni === 'Alpa' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
+                                    'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+                                  }`}>
+                                    {statusHariIni}
+                                  </span>
+                                </div>
+                                
+                                {waktuPulangVal && (
+                                  <div className="text-xs text-amber-400 font-mono">
+                                    Pulang: <strong>{waktuPulangVal}</strong>
+                                  </div>
+                                )}
+
+                                <div className="flex items-center gap-1.5 pt-2 border-t border-slate-700/50 flex-wrap">
+                                  <button onClick={() => handleManualStatusChangeSiswa(siswa, 'Hadir')} className="flex-1 py-1.5 bg-emerald-600/30 hover:bg-emerald-600 text-emerald-200 hover:text-white rounded-lg font-semibold text-[11px] transition cursor-pointer text-center">Hadir</button>
+                                  <button onClick={() => handleManualStatusChangeSiswa(siswa, 'Sakit')} className="flex-1 py-1.5 bg-blue-600/30 hover:bg-blue-600 text-blue-200 hover:text-white rounded-lg font-semibold text-[11px] transition cursor-pointer text-center">Sakit</button>
+                                  <button onClick={() => handleManualStatusChangeSiswa(siswa, 'Izin')} className="flex-1 py-1.5 bg-purple-600/30 hover:bg-purple-600 text-purple-200 hover:text-white rounded-lg font-semibold text-[11px] transition cursor-pointer text-center">Izin</button>
+                                  <button onClick={() => handleManualStatusChangeSiswa(siswa, 'Alpa')} className="flex-1 py-1.5 bg-rose-600/30 hover:bg-rose-600 text-rose-200 hover:text-white rounded-lg font-semibold text-[11px] transition cursor-pointer text-center">Alpa</button>
+                                  
+                                  {sudahHadir && !waktuPulangVal && (
+                                    <button onClick={() => handleAbsenPulangManual(siswa.nama)} className="w-full py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[11px] transition cursor-pointer shadow text-center mt-1">
+                                      Catat Pulang
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+
+                      {/* TAMPILAN TABEL BIASA (KHUSUS DESKTOP / LAYAR LEBAR) */}
+                      <div className="hidden md:block border rounded-2xl overflow-hidden shadow-sm">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead className={`${isDarkMode ? 'bg-slate-800 text-slate-200' : 'bg-gray-100 text-gray-700'} uppercase font-bold`}>
+                            <tr>
+                              <th className="p-3">No</th>
+                              <th className="p-3">Nama Siswa</th>
+                              <th className="p-3 text-center">Status Masuk</th>
+                              <th className="p-3 text-center">Jam Pulang</th>
+                              <th className="p-3 text-center">Ubah Keterangan / Absen Pulang</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-700/30">
+                            {dataSiswa
+                              .filter(s => {
+                                let ko = s.kelasPerTP;
+                                if (typeof ko === 'string') { try { ko = JSON.parse(ko); } catch(e){ ko = {}; } }
+                                const klsSiswa = (ko?.[tahunPelajaranAktif] || s.jabatan_kelas || '').trim().toUpperCase();
+                                const statusTpSiswa = s.statusTP?.[tahunPelajaranAktif] || 'Aktif';
+                                return klsSiswa === selectedKelasModal && statusTpSiswa === 'Aktif';
+                              })
+                              .sort((a, b) => a.nama.localeCompare(b.nama))
+                              .map((siswa, idx) => {
+                                const logSiswa = logKehadiran.find(
+                                  l => l.role === 'siswa' && l.nama === siswa.nama && l.jabatan_kelas === selectedKelasModal && l.tanggal === tanggalHariIniStr && l.tahunPelajaran === tahunPelajaranAktif
+                                );
+                                const statusHariIni = logSiswa ? logSiswa.status : 'Belum Absen';
+                                const waktuPulangVal = logSiswa ? logSiswa.waktuPulang : null;
+                                const sudahHadir = logSiswa && ['Tepat Waktu', 'Terlambat', 'Hadir'].includes(logSiswa.status);
+
+                                return (
+                                  <tr key={siswa.id || idx} className={`${isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-gray-50'}`}>
+                                    <td className="p-3 font-mono">{idx + 1}</td>
+                                    <td className="p-3 font-bold">{siswa.nama}</td>
+                                    <td className="p-3 text-center">
+                                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
+                                        ['Tepat Waktu', 'Hadir'].includes(statusHariIni) ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                                        statusHariIni === 'Terlambat' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                                        statusHariIni === 'Sakit' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                                        statusHariIni === 'Izin' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+                                        statusHariIni === 'Alpa' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
+                                        'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+                                      }`}>
+                                        {statusHariIni}
+                                      </span>
+                                    </td>
+                                    <td className="p-3 text-center font-mono font-bold text-amber-400">
+                                      {waktuPulangVal ? waktuPulangVal : '-'}
+                                    </td>
+                                    <td className="p-3 text-center flex items-center justify-center gap-1.5 flex-wrap">
+                                      <button onClick={() => handleManualStatusChangeSiswa(siswa, 'Hadir')} className="px-2.5 py-1 bg-emerald-600/30 hover:bg-emerald-600 text-emerald-200 hover:text-white rounded-lg font-semibold text-[10px] transition cursor-pointer">Hadir</button>
+                                      <button onClick={() => handleManualStatusChangeSiswa(siswa, 'Sakit')} className="px-2.5 py-1 bg-blue-600/30 hover:bg-blue-600 text-blue-200 hover:text-white rounded-lg font-semibold text-[10px] transition cursor-pointer">Sakit</button>
+                                      <button onClick={() => handleManualStatusChangeSiswa(siswa, 'Izin')} className="px-2.5 py-1 bg-purple-600/30 hover:bg-purple-600 text-purple-200 hover:text-white rounded-lg font-semibold text-[10px] transition cursor-pointer">Izin</button>
+                                      <button onClick={() => handleManualStatusChangeSiswa(siswa, 'Alpa')} className="px-2.5 py-1 bg-rose-600/30 hover:bg-rose-600 text-rose-200 hover:text-white rounded-lg font-semibold text-[10px] transition cursor-pointer">Alpa</button>
+                                      
+                                      {sudahHadir && !waktuPulangVal && (
+                                        <button onClick={() => handleAbsenPulangManual(siswa.nama)} className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[10px] transition cursor-pointer shadow">
+                                          Pulang
+                                        </button>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   ) : (
                     <div className="text-center py-12 opacity-50 text-xs">
@@ -2720,7 +2784,64 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
               {/* KONTEN TAB GURU & STAFF */}
               {modalTabManual === 'guru' && (
                 <div className="space-y-4">
-                  <div className="border rounded-2xl overflow-hidden shadow-sm">
+                  {/* TAMPILAN CARD KHUSUS HP (MOBILE) */}
+                  <div className="block md:hidden space-y-3">
+                    {dataGuru
+                      .slice()
+                      .sort((a, b) => a.nama.localeCompare(b.nama))
+                      .map((guru, idx) => {
+                        const logGuru = logKehadiran.find(
+                          l => l.role === 'guru' && l.nama === guru.nama && l.tanggal === tanggalHariIniStr && l.tahunPelajaran === tahunPelajaranAktif
+                        );
+                        const statusGuruHariIni = logGuru ? logGuru.status : 'Belum Absen';
+                        const waktuPulangGuruVal = logGuru ? logGuru.waktuPulang : null;
+                        const sudahHadirGuru = logGuru && ['Tepat Waktu', 'Terlambat', 'Hadir', 'Hadir (Luar Jadwal)'].includes(logGuru.status);
+
+                        return (
+                          <div key={guru.id || idx} className={`p-3.5 rounded-2xl border space-y-2.5 ${isDarkMode ? 'bg-slate-800/80 border-slate-700' : 'bg-white border-gray-200 shadow-sm'}`}>
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <span className="text-[10px] font-mono text-slate-400">No. {idx + 1}</span>
+                                <h4 className="font-bold text-sm text-white">{guru.nama}</h4>
+                                <p className="text-xs text-blue-400 font-medium">{guru.jabatan_kelas}</p>
+                              </div>
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
+                                ['Tepat Waktu', 'Hadir', 'Hadir (Luar Jadwal)'].includes(statusGuruHariIni) ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                                statusGuruHariIni === 'Terlambat' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                                statusGuruHariIni === 'Sakit' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                                statusGuruHariIni === 'Izin' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+                                statusGuruHariIni === 'Alpa' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
+                                'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+                              }`}>
+                                {statusGuruHariIni}
+                              </span>
+                            </div>
+
+                            {waktuPulangGuruVal && (
+                              <div className="text-xs text-amber-400 font-mono">
+                                Pulang: <strong>{waktuPulangGuruVal}</strong>
+                              </div>
+                            )}
+
+                            <div className="flex items-center gap-1.5 pt-2 border-t border-slate-700/50 flex-wrap">
+                              <button onClick={() => handleManualStatusChangeGuru(guru, 'Hadir')} className="flex-1 py-1.5 bg-emerald-600/30 hover:bg-emerald-600 text-emerald-200 hover:text-white rounded-lg font-semibold text-[11px] transition cursor-pointer text-center">Hadir</button>
+                              <button onClick={() => handleManualStatusChangeGuru(guru, 'Sakit')} className="flex-1 py-1.5 bg-blue-600/30 hover:bg-blue-600 text-blue-200 hover:text-white rounded-lg font-semibold text-[11px] transition cursor-pointer text-center">Sakit</button>
+                              <button onClick={() => handleManualStatusChangeGuru(guru, 'Izin')} className="flex-1 py-1.5 bg-purple-600/30 hover:bg-purple-600 text-purple-200 hover:text-white rounded-lg font-semibold text-[11px] transition cursor-pointer text-center">Izin</button>
+                              <button onClick={() => handleManualStatusChangeGuru(guru, 'Alpa')} className="flex-1 py-1.5 bg-rose-600/30 hover:bg-rose-600 text-rose-200 hover:text-white rounded-lg font-semibold text-[11px] transition cursor-pointer text-center">Alpa</button>
+                              
+                              {sudahHadirGuru && !waktuPulangGuruVal && (
+                                <button onClick={() => handleAbsenPulangManual(guru.nama)} className="w-full py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[11px] transition cursor-pointer shadow text-center mt-1">
+                                  Catat Pulang
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+
+                  {/* TAMPILAN TABEL BIASA (KHUSUS DESKTOP / LAYAR LEBAR) */}
+                  <div className="hidden md:block border rounded-2xl overflow-hidden shadow-sm">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead className={`${isDarkMode ? 'bg-slate-800 text-slate-200' : 'bg-gray-100 text-gray-700'} uppercase font-bold`}>
                         <tr>
