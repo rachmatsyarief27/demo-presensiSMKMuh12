@@ -2957,34 +2957,34 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
       {/* KONTEN UTAMA (DIPERBESAR AGAR PAS DI LAYAR TV) */}
       <div className="space-y-6 my-auto max-w-7xl mx-auto w-full px-2">
         
-        {/* 3 KOTAK STATISTIK UTAMA (DI-SCALE LEBIH BESAR) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-slate-900/90 border border-slate-800 p-8 rounded-3xl text-center space-y-2 shadow-2xl backdrop-blur">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Guru Hadir Hari Ini</p>
-            <h3 className="text-6xl font-black text-blue-400 py-1">{totalHadirGuru}</h3>
-            <p className="text-xs text-slate-400 font-medium">Dari total {dataGuru.length} Guru & Staff</p>
+        {/* 3 KOTAK STATISTIK UTAMA */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+          <div className="bg-slate-900/90 border border-slate-800 p-5 md:p-8 rounded-3xl text-center space-y-1 md:space-y-2 shadow-2xl backdrop-blur">
+            <p className="text-[11px] md:text-xs font-bold text-slate-400 uppercase tracking-widest">Guru Hadir Hari Ini</p>
+            <h3 className="text-4xl md:text-6xl font-black text-blue-400 py-1">{totalHadirGuru}</h3>
+            <p className="text-[11px] md:text-xs text-slate-400 font-medium">Dari total {dataGuru.length} Guru & Staff</p>
           </div>
 
-          <div className="bg-slate-900/90 border border-slate-800 p-8 rounded-3xl text-center space-y-2 shadow-2xl backdrop-blur">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Siswa Hadir Hari Ini</p>
-            <h3 className="text-6xl font-black text-emerald-400 py-1">{totalHadirSiswa}</h3>
-            <p className="text-xs text-slate-400 font-medium">Dari total {totalSiswaAktifTP} Siswa Aktif</p>
+          <div className="bg-slate-900/90 border border-slate-800 p-5 md:p-8 rounded-3xl text-center space-y-1 md:space-y-2 shadow-2xl backdrop-blur">
+            <p className="text-[11px] md:text-xs font-bold text-slate-400 uppercase tracking-widest">Siswa Hadir Hari Ini</p>
+            <h3 className="text-4xl md:text-6xl font-black text-emerald-400 py-1">{totalHadirSiswa}</h3>
+            <p className="text-[11px] md:text-xs text-slate-400 font-medium">Dari total {totalSiswaAktifTP} Siswa Aktif</p>
           </div>
 
-          <div className="bg-slate-900/90 border border-slate-800 p-8 rounded-3xl text-center space-y-2 shadow-2xl backdrop-blur">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tercatat Terlambat</p>
-            <h3 className="text-6xl font-black text-rose-400 py-1">{totalTerlambat}</h3>
-            <p className="text-xs text-slate-400 font-medium">Warga sekolah melewati jam masuk</p>
+          <div className="bg-slate-900/90 border border-slate-800 p-5 md:p-8 rounded-3xl text-center space-y-1 md:space-y-2 shadow-2xl backdrop-blur">
+            <p className="text-[11px] md:text-xs font-bold text-slate-400 uppercase tracking-widest">Tercatat Terlambat</p>
+            <h3 className="text-4xl md:text-6xl font-black text-rose-400 py-1">{totalTerlambat}</h3>
+            <p className="text-[11px] md:text-xs text-slate-400 font-medium">Warga sekolah melewati jam masuk</p>
           </div>
         </div>
 
         {/* KOTAK REKAP KEHADIRAN SISWA PER KELAS */}
-        <div className="bg-slate-900/95 border border-slate-800 p-6 rounded-3xl shadow-2xl">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400 mb-4 flex items-center gap-2">
+        <div className="bg-slate-900/95 border border-slate-800 p-4 md:p-6 rounded-3xl shadow-2xl">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400 mb-3 flex items-center gap-2">
             <Layers size={18} /> Rekap Kehadiran Siswa Per Kelas Hari Ini
           </h3>
           
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 max-h-[220px] overflow-y-auto pr-1">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 md:gap-3.5 max-h-[180px] md:max-h-[220px] overflow-y-auto pr-1">
             {daftarKelasAktif.length > 0 ? (
               daftarKelasAktif.map((namaKelas, idx) => {
                 const totalSiswaDiKelas = dataSiswa.filter(s => 
@@ -2995,19 +2995,19 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
                 const siswaHadirDiKelas = logSiswaHadirHariIni.filter(l => l.jabatan_kelas === namaKelas).length;
 
                 return (
-                  <div key={idx} className="bg-slate-800/80 border border-slate-700/70 p-3.5 rounded-2xl flex flex-col justify-between text-left shadow-md">
-                    <span className="font-bold text-sm text-slate-100 truncate">{namaKelas}</span>
-                    <div className="flex justify-between items-baseline pt-2 border-t border-slate-700/60 mt-2">
-                      <span className="text-[11px] text-slate-400">Hadir:</span>
-                      <span className="font-mono text-xs font-bold text-emerald-400">
-                        {siswaHadirDiKelas} <span className="text-[11px] text-slate-400 font-normal">/ {totalSiswaDiKelas}</span>
+                  <div key={idx} className="bg-slate-800/80 border border-slate-700/70 p-3 rounded-2xl flex flex-col justify-between text-left shadow-md">
+                    <span className="font-bold text-xs md:text-sm text-slate-100 truncate">{namaKelas}</span>
+                    <div className="flex justify-between items-baseline pt-1.5 border-t border-slate-700/60 mt-1.5">
+                      <span className="text-[10px] text-slate-400">Hadir:</span>
+                      <span className="font-mono text-[11px] md:text-xs font-bold text-emerald-400">
+                        {siswaHadirDiKelas} <span className="text-[10px] text-slate-400 font-normal">/ {totalSiswaDiKelas}</span>
                       </span>
                     </div>
                   </div>
                 );
               })
             ) : (
-              <div className="col-span-full text-center text-slate-500 text-xs py-6">
+              <div className="col-span-full text-center text-slate-500 text-xs py-4">
                 Belum ada data kelas atau siswa yang terdaftar di tahun pelajaran ini.
               </div>
             )}
@@ -3016,12 +3016,12 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
       </div>
 
       {/* RUNNING TEXT */}
-      <div className="bg-blue-900/50 border border-blue-500/40 rounded-2xl p-3.5 overflow-hidden relative flex items-center shadow-xl">
-        <div className="bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-xl uppercase tracking-wider mr-4 flex-shrink-0 z-10 shadow">
+      <div className="bg-blue-900/50 border border-blue-500/40 rounded-2xl p-3 overflow-hidden relative flex items-center shadow-xl">
+        <div className="bg-blue-600 text-white text-[11px] md:text-xs font-bold px-3 py-1.5 rounded-xl uppercase tracking-wider mr-3 flex-shrink-0 z-10 shadow">
           Pengumuman
         </div>
         <div className="overflow-hidden w-full relative">
-          <p className="animate-running-text text-blue-200 text-sm font-bold tracking-wide">
+          <p className="animate-running-text text-blue-200 text-xs md:text-sm font-bold tracking-wide">
             {infoSekolah.pengumuman || 'Selamat datang di lingkungan sekolah. Harap selalu menjaga kebersihan dan ketertiban.'}
           </p>
         </div>
