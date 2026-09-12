@@ -4632,7 +4632,7 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
 };
 
 /* ==============================================================
-   10. KOMPONEN CETAK KARTU RFID & QR CODE DIGITAL (RESPONSIF & FIX KELAS)
+   10. KOMPONEN CETAK KARTU RFID & QR CODE DIGITAL (RESPONSIF & FIX CETAK MULTI-HALAMAN)
 ============================================================== */
 const KontenCetakKartu = ({ dataGuru, dataSiswa, infoSekolah, isDarkMode, tahunPelajaranAktif }) => {
   const [selectedType, setSelectedType] = useState('siswa');
@@ -4688,8 +4688,65 @@ const KontenCetakKartu = ({ dataGuru, dataSiswa, infoSekolah, isDarkMode, tahunP
     setSelectedPeroranganKelas('');
   };
 
+  // FUNGSI CETAK AMAN MENGGUNAKAN POPUP/IFRAME AGAR SEMUA KARTU TERCETAK PENUH
   const handlePrint = () => {
-    window.print();
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) {
+      alert('Mohon izinkan pop-up pada browser Anda untuk mencetak kartu.');
+      return;
+    }
+
+    const printArea = document.getElementById('printable-card-area');
+    if (!printArea) return;
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Cetak ID Card Sekolah - TP ${tahunPelajaranAktif}</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+          <style>
+            @media print {
+              * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+              body { background: white !important; margin: 0; padding: 10px; }
+              .printable-card-item {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                gap: 15px !important;
+                justify-content: center !important;
+                margin-bottom: 15px !important;
+              }
+            }
+            body { font-family: sans-serif; background: #f3f4f6; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+            .printable-card-item { 
+              margin-bottom: 20px; 
+              display: flex; 
+              flex-direction: row; 
+              flex-wrap: wrap; 
+              gap: 15px; 
+              justify-content: center; 
+              background: white; 
+              padding: 10px; 
+              border-radius: 8px;
+            }
+          </style>
+        </head>
+        <body>
+          <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+            ${printArea.innerHTML}
+          </div>
+          <script>
+            setTimeout(() => {
+              window.print();
+              window.close();
+            }, 600);
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   const renderKartuItem = (person, roleOrClass) => {
@@ -4702,7 +4759,7 @@ const KontenCetakKartu = ({ dataGuru, dataSiswa, infoSekolah, isDarkMode, tahunP
     const kelasLabel = selectedType === 'siswa' ? getKelasSiswaTP(person) : (person.jabatan_kelas || 'Staff Pengajar');
 
     return (
-      <div key={person.id || person.rfid} className="flex flex-col sm:flex-row gap-4 justify-center items-center w-full mb-4 break-inside-avoid">
+      <div key={person.id || person.rfid} className="flex flex-col sm:flex-row gap-4 justify-center items-center w-full mb-6 printable-card-item">
         
         {/* KARTU SISI DEPAN */}
         <div className={`w-[320px] h-[190px] rounded-2xl shadow-xl p-4 flex flex-col justify-between relative overflow-hidden border transition-all ${
@@ -4786,24 +4843,6 @@ const KontenCetakKartu = ({ dataGuru, dataSiswa, infoSekolah, isDarkMode, tahunP
 
   return (
     <div className="flex flex-col h-full space-y-4 overflow-y-auto pb-6 max-w-5xl mx-auto">
-      <style dangerouslySetInnerHTML={{ __html: `
-        @media print {
-          * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          body * { visibility: hidden; }
-          #printable-card-area, #printable-card-area * { visibility: visible; }
-          #printable-card-area {
-            position: absolute; left: 0; top: 0; width: 100%;
-            display: flex; flex-wrap: wrap; justify-content: center; gap: 20px;
-            background: white !important; box-shadow: none !important;
-            padding: 10px; margin: 0;
-          }
-          .no-print { display: none !important; }
-        }
-      `}} />
-
       <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100 text-gray-800'} p-4 md:p-6 rounded-xl shadow-sm border flex flex-col md:flex-row justify-between items-center gap-4 no-print`}>
         <div>
           <h3 className="text-lg md:text-xl font-bold">Studio Desain & Cetak ID Card</h3>
@@ -4989,15 +5028,14 @@ const KontenCetakKartu = ({ dataGuru, dataSiswa, infoSekolah, isDarkMode, tahunP
 
         </div>
 
-        <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100'} md:col-span-2 p-6 md:p-8 rounded-xl shadow-sm border flex flex-col items-center justify-center space-y-8 overflow-y-auto max-h-[700px]`}>
+        {/* AREA PRATINJAU TUNGGAL */}
+        <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100'} md:col-span-2 p-6 md:p-8 rounded-xl shadow-sm border flex flex-col items-center justify-start space-y-6 overflow-y-auto`}>
           
-          {modeCetak === 'perorangan' && selectedPerson ? (
-            <div id="printable-card-area" className="flex flex-col sm:flex-row gap-6 justify-center items-center w-full">
-              {renderKartuItem(selectedPerson, getKelasSiswaTP(selectedPerson))}
-            </div>
-          ) : modeCetak === 'kelas' ? (
-            <div id="printable-card-area" className="flex flex-col items-center gap-6 w-full">
-              {selectedKelas ? (
+          <div id="printable-card-area" className="flex flex-col items-center gap-6 w-full">
+            {modeCetak === 'perorangan' && selectedPerson ? (
+              renderKartuItem(selectedPerson, getKelasSiswaTP(selectedPerson))
+            ) : modeCetak === 'kelas' ? (
+              selectedKelas ? (
                 siswaPerKelasList.length > 0 ? (
                   siswaPerKelasList.map((siswa) => renderKartuItem(siswa, getKelasSiswaTP(siswa)))
                 ) : (
@@ -5005,19 +5043,17 @@ const KontenCetakKartu = ({ dataGuru, dataSiswa, infoSekolah, isDarkMode, tahunP
                 )
               ) : (
                 <p className="text-yellow-400 text-sm py-12 font-semibold">⚠️ Silakan pilih kelas terlebih dahulu pada panel kiri.</p>
-              )}
-            </div>
-          ) : modeCetak === 'semua_guru' ? (
-            <div id="printable-card-area" className="flex flex-col items-center gap-6 w-full">
-              {dataGuru.length > 0 ? (
+              )
+            ) : modeCetak === 'semua_guru' ? (
+              dataGuru.length > 0 ? (
                 dataGuru.map((guru) => renderKartuItem(guru, guru.jabatan_kelas || 'Guru & Staff'))
               ) : (
                 <p className="text-gray-400 text-sm py-12">Belum ada data guru & staff.</p>
-              )}
-            </div>
-          ) : (
-            <p className="text-gray-400 text-sm">Belum ada data yang dipilih.</p>
-          )}
+              )
+            ) : (
+              <p className="text-gray-400 text-sm py-12">Belum ada data yang dipilih.</p>
+            )}
+          </div>
 
           <p className="text-xs text-gray-400 italic no-print text-center">*Kartu bersih, profesional, awet dipakai sampai lulus, dan dilengkapi QR Code serta RFID aktif.</p>
         </div>
