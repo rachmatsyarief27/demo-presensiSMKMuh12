@@ -2020,7 +2020,14 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
     return `https://ui-avatars.com/api/?name=${initials}&background=2563eb&color=fff&size=128&bold=true`;
   };
 
-  const daftarKelasUnik = [...new Set(dataSiswa.map(s => s.kelasPerTP?.[tahunPelajaranAktif]).filter(Boolean))].sort();
+  // AMBIL KELAS UNIK SECARA AMAN DARI DATA SISWA & OBJEK KELAS PER TP
+  const daftarKelasUnik = [...new Set(
+    dataSiswa.map(s => {
+      let ko = s.kelasPerTP;
+      if (typeof ko === 'string') { try { ko = JSON.parse(ko); } catch(e){ ko = {}; } }
+      return (ko?.[tahunPelajaranAktif] || s.jabatan_kelas || '').trim().toUpperCase();
+    }).filter(Boolean)
+  )].sort();
 
   // AMBIL CONFIG JAM AKTIF SECARA AMAN BERDASARKAN MODE APAPUN
   const currentMode = pengaturanJam?.modeAktif || 'Pagi';
@@ -2082,9 +2089,7 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
         waktuPulang: ['Tepat Waktu', 'Terlambat', 'Hadir'].includes(finalStatus) ? targetLog.waktuPulang : null
       };
 
-      // UPDATE KE SUPABASE
       await supabase.from('log_kehadiran').update(dataUpdate).eq('id', targetLog.id);
-
       updatedLogs[existingIndex] = { ...targetLog, ...dataUpdate };
     } else {
       const newLog = {
@@ -2100,9 +2105,7 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
         tahunPelajaran: tahunPelajaranAktif
       };
 
-      // INSERT KE SUPABASE
       await supabase.from('log_kehadiran').insert([newLog]);
-
       updatedLogs.unshift(newLog);
     }
 
@@ -2153,9 +2156,7 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
         waktuPulang: ['Tepat Waktu', 'Terlambat', 'Hadir', 'Hadir (Luar Jadwal)'].includes(finalStatus) ? targetLog.waktuPulang : null
       };
 
-      // UPDATE KE SUPABASE
       await supabase.from('log_kehadiran').update(dataUpdate).eq('id', targetLog.id);
-
       updatedLogs[existingIndex] = { ...targetLog, ...dataUpdate };
     } else {
       const newLog = {
@@ -2171,9 +2172,7 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
         tahunPelajaran: tahunPelajaranAktif
       };
 
-      // INSERT KE SUPABASE
       await supabase.from('log_kehadiran').insert([newLog]);
-
       updatedLogs.unshift(newLog);
     }
 
@@ -2199,7 +2198,6 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
       const updatedLogs = [...logKehadiran];
       const targetLog = updatedLogs[existingIndex];
       
-      // UPDATE KE SUPABASE
       await supabase.from('log_kehadiran').update({ waktuPulang: currentTimeFormatted }).eq('id', targetLog.id);
 
       updatedLogs[existingIndex] = { ...targetLog, waktuPulang: currentTimeFormatted };
@@ -2263,7 +2261,10 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
         const foundSiswa = dataSiswa.find(s => s.rfid.toUpperCase() === scannedRfid);
         if (foundSiswa) {
           const statusTP = foundSiswa.statusTP?.[tahunPelajaranAktif] || 'Aktif';
-          const kelasTP = foundSiswa.kelasPerTP?.[tahunPelajaranAktif];
+          let ko = foundSiswa.kelasPerTP;
+          if (typeof ko === 'string') { try { ko = JSON.parse(ko); } catch(e){ ko = {}; } }
+          const kelasTP = ko?.[tahunPelajaranAktif];
+
           if (statusTP !== 'Aktif' || !kelasTP) {
             showToast(`Siswa ${foundSiswa.nama} belum terdaftar di TP ${tahunPelajaranAktif}!`, 'error');
             playCustomAudio('gagal');
@@ -2311,7 +2312,6 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
               playBeep(true);
               existingLog.waktuPulang = currentTimeFormatted;
               
-              // UPDATE PULANG KE SUPABASE
               await supabase.from('log_kehadiran').update({ waktuPulang: currentTimeFormatted }).eq('id', existingLog.id);
 
               updatedLogs.splice(existingLogIndex, 1);
@@ -2368,7 +2368,6 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
             tahunPelajaran: tahunPelajaranAktif
           };
 
-          // INSERT DATANG KE SUPABASE
           await supabase.from('log_kehadiran').insert([newLog]);
 
           setLogKehadiran([newLog, ...logKehadiran]);
@@ -2657,7 +2656,13 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
                         </thead>
                         <tbody className="divide-y divide-gray-700/30">
                           {dataSiswa
-                            .filter(s => s.kelasPerTP?.[tahunPelajaranAktif] === selectedKelasModal && (s.statusTP?.[tahunPelajaranAktif] || 'Aktif') === 'Aktif')
+                            .filter(s => {
+                              let ko = s.kelasPerTP;
+                              if (typeof ko === 'string') { try { ko = JSON.parse(ko); } catch(e){ ko = {}; } }
+                              const klsSiswa = (ko?.[tahunPelajaranAktif] || s.jabatan_kelas || '').trim().toUpperCase();
+                              const statusTpSiswa = s.statusTP?.[tahunPelajaranAktif] || 'Aktif';
+                              return klsSiswa === selectedKelasModal && statusTpSiswa === 'Aktif';
+                            })
                             .sort((a, b) => a.nama.localeCompare(b.nama))
                             .map((siswa, idx) => {
                               const logSiswa = logKehadiran.find(
@@ -6269,7 +6274,6 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
   
   const [daftarMasterKelas, setDaftarMasterKelas] = useState([]);
 
-// ---> TAMBAHKAN KODE INI <---
   useEffect(() => {
     const ambilMasterKelasSupabase = async () => {
       const { data, error } = await supabase.from('master_kelas').select('*');
@@ -6281,11 +6285,14 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
     };
     ambilMasterKelasSupabase();
   }, []);
-  // -----------------------------
 
   const [isKelasModalOpen, setIsKelasModalOpen] = useState(false);
   const [inputNamaKelas, setInputNamaKelas] = useState('');
   const [inputKeahlian, setInputKeahlian] = useState('');
+
+  // State untuk modal pilih kelas sebelum download template
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [selectedKelasTemplate, setSelectedKelasTemplate] = useState('');
 
   const daftarNamaKelasFilter = ['Semua', ...new Set(daftarMasterKelas.map(k => k.nama.trim().toUpperCase()))];
   const [selectedKelasFilter, setSelectedKelasFilter] = useState('Semua');
@@ -6517,10 +6524,8 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
       const finalRfid = cleanRfidInput && cleanRfidInput !== 'RFID' ? cleanRfidInput : (formData.nisn ? `NISN-${formData.nisn.trim()}` : `ID-${Date.now()}`);
       const cleanKelasForm = formData.jabatan_kelas.trim().toUpperCase();
       
-      // --- DEFINISI KEAHLIAN YANG KEMARIN TERLEWAT ---
       const foundMaster = daftarMasterKelas.find(k => k.nama.trim().toUpperCase() === cleanKelasForm);
       const finalKeahlian = foundMaster ? foundMaster.keahlian : 'Konsentrasi Umum';
-      // ---------------------------------------------
       
       if (modalMode === 'add') {
         const initialKelasPerTP = { [tahunPelajaranAktif]: cleanKelasForm };
@@ -6577,21 +6582,7 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
     setIsModalOpen(false);
   };
 
-  const handleDownloadTemplate = () => {
-    let csvHeader = activeTab === 'siswa' 
-      ? "Nama,NISN,Kelas,Konsentrasi Keahlian,RFID\nBudi Santoso,0081234567,X TITL,Teknik Ketenagalistrikan,SSW101\nCitra Kirana,0087654321,X TKRO,Teknik Kendaraan Ringan Otomotif,SSW102"
-      : "Nama,Kode Guru,Jabatan,RFID\n\"ADE SUHARSONO, S.Pd.\",GURU001,KEPALA SEKOLAH,SW001\n\"R. BAROTO PRISWANTO, S.Pd.I.\",GURU002,WAKIL KEPALA SEKOLAH,SW002\nSujana S.Pd.,GURU014,GURU,SW014";
-    
-    const blob = new Blob([csvHeader], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `Template_Import_${activeTab === 'siswa' ? 'Siswa' : 'Guru'}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
+  // FUNGSI IMPORT CSV DENGAN VALIDASI KELAS MASTER
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -6609,64 +6600,56 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
 
       const delimiter = lines[0].includes(';') ? ';' : ',';
 
-      let importedCount = 0;
       if (activeTab === 'siswa') {
-        const newMasterClasses = [...daftarMasterKelas];
         const batchSiswaToInsert = [];
 
         for (let i = 1; i < lines.length; i++) {
           const cols = lines[i].split(delimiter).map(c => c.trim().replace(/^"|"$/g, ''));
-          
-          // Lewati jika baris benar-benar kosong total
           if (cols.length === 0 || !cols[0]) continue;
 
-          // Lewati jika baris adalah header (mengandung kata 'nama' atau 'nisn')
           const firstColLower = cols[0].toLowerCase();
           if (firstColLower === 'nama' || firstColLower.includes('nisn')) continue;
 
           const nama = cols[0];
           const nisn = cols[1] || '';
-          const kelas = (cols[2] || '').trim().toUpperCase(); // Kolom C = Kelas (X TITL)
+          const kelas = (cols[2] || '').trim().toUpperCase(); 
           const keahlian = cols[3] || 'Konsentrasi Umum';
           const rfid = cols[4] || '';
 
-          if (kelas && !newMasterClasses.some(k => k.nama.trim().toUpperCase() === kelas)) {
-            newMasterClasses.push({ nama: kelas, keahlian: keahlian });
+          // Validasi: Pastikan kelas pada CSV sudah terdaftar di Master Kelas
+          const isKelasValid = daftarMasterKelas.some(k => k.nama.trim().toUpperCase() === kelas);
+          if (!isKelasValid) {
+            alert(`Gagal: Kelas "${kelas}" pada baris siswa "${nama}" belum terdaftar di Master Kelas! Harap buat kelasnya terlebih dahulu di menu "Kelola Kelas".`);
+            return;
           }
 
           const autoFoto = typeof getAvatarUrl === 'function' ? getAvatarUrl(nama) : `https://ui-avatars.com/api/?name=${encodeURIComponent(nama)}`;
           const generatedRfid = (rfid && rfid !== 'RFID' && rfid !== '') ? rfid.toUpperCase() : (nisn ? `NISN-${nisn}` : `ID-${Date.now() + i}`);
 
-         batchSiswaToInsert.push({
+          batchSiswaToInsert.push({
             nama,
             nisn,
             rfid: generatedRfid,
             foto: autoFoto,
-            kelasPerTP: {
-              [tahunPelajaranAktif]: kelas
-            },
-            statusTP: {
-              [tahunPelajaranAktif]: 'Aktif'
-            },
+            kelasPerTP: { [tahunPelajaranAktif]: kelas },
+            statusTP: { [tahunPelajaranAktif]: 'Aktif' },
             kejuruan: keahlian
           });
         }
 
-        // Bulk insert supaya prosesnya kilat dan langsung masuk Supabase
-       if (batchSiswaToInsert.length > 0) {
+        if (batchSiswaToInsert.length > 0) {
           const { data, error } = await supabase.from('siswa').insert(batchSiswaToInsert).select();
           if (error) {
             alert('Gagal import massal ke Supabase: ' + error.message);
             return;
           }
           if (data) {
-            // Gabungkan data dari Supabase langsung ke state lokal tabel aplikasi
             setDataSiswa(prevSiswa => [...data, ...prevSiswa]);
-            setDaftarMasterKelas(newMasterClasses);
-            alert(`Berhasil mengimpor ${data.length} data siswa secara massal!`);
+            alert(`Berhasil mengimpor ${data.length} data siswa secara massal ke Supabase!`);
           }
         }
       } else {
+        // Bagian Guru & Staff
         const newGuruList = [...dataGuru];
         for (let i = 1; i < lines.length; i++) {
           const line = lines[i];
@@ -6707,12 +6690,11 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
             if (data && data.length > 0) {
               newGuruList.unshift(data[0]);
             }
-            importedCount++;
           }
         }
         setDataGuru(newGuruList);
+        alert(`Berhasil mengimpor data guru secara massal ke Supabase!`);
       }
-
       e.target.value = null;
     };
     reader.readAsText(file);
@@ -6721,14 +6703,12 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
   const currentData = activeTab === 'guru' 
     ? dataGuru 
     : dataSiswa.map(s => {
-        // Amankan kelasPerTP (ubah dari teks string ke objek JSON jika perlu)
         let kelasObj = s.kelasPerTP;
         if (typeof kelasObj === 'string') {
           try { kelasObj = JSON.parse(kelasObj); } catch (e) { kelasObj = {}; }
         }
         const kelasSiswa = (kelasObj?.[tahunPelajaranAktif] || 'Belum diatur').trim().toUpperCase();
 
-        // Amankan statusTP
         let statusObj = s.statusTP;
         if (typeof statusObj === 'string') {
           try { statusObj = JSON.parse(statusObj); } catch (e) { statusObj = {}; }
@@ -6736,8 +6716,6 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
         const statusAktifTP = statusObj?.[tahunPelajaranAktif] || 'Belum Terdaftar';
 
         const foundMaster = daftarMasterKelas.find(k => k.nama.trim().toUpperCase() === kelasSiswa);
-        
-        // Prioritaskan ambil dari kolom s.kejuruan Supabase, fallback ke master, lalu 'Belum diatur'
         const programKeahlianFinal = s.kejuruan || (foundMaster ? foundMaster.keahlian : 'Belum diatur');
 
         return {
@@ -6763,12 +6741,11 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
 
   const isAllSelected = filteredData.length > 0 && filteredData.every(item => selectedIds.includes(item.id));
 
- return (
+  return (
     <div className="flex flex-col h-full space-y-4">
-      {/* BAGIAN ATAS / FILTER & TOMBOL AKSI (Diringkas agar muat di HP) */}
+      {/* BAGIAN ATAS / FILTER & TOMBOL AKSI */}
       <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100 text-gray-800'} p-3 rounded-xl shadow-sm border flex flex-col gap-3`}>
         
-        {/* Baris 1: Tab Pilihan (Siswa / Guru) & Tombol Tambah HP */}
         <div className="flex items-center justify-between">
           <div className={`flex ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border'} p-1 rounded-full`}>
             <button onClick={() => { setActiveTab('siswa'); setSelectedKelasFilter('Semua'); }} className={`px-5 py-1.5 rounded-full text-xs font-medium transition cursor-pointer ${activeTab === 'siswa' ? `${isDarkMode ? 'bg-slate-900 text-blue-400' : 'bg-white text-blue-600'} shadow-sm` : 'opacity-60'}`}>Siswa</button>
@@ -6778,7 +6755,6 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
           <button onClick={handleOpenAdd} className="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-1 text-xs font-semibold cursor-pointer shadow transition md:hidden"><Plus size={15} /> Tambah</button>
         </div>
 
-        {/* Baris 2: Filter & Tombol Lainnya (Bisa digeser ke samping di HP) */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
           {selectedIds.length > 0 && (
             <button onClick={handleBulkDelete} className="bg-red-600 text-white px-3 py-2 rounded-lg flex items-center gap-1 text-xs font-semibold cursor-pointer shadow transition flex-shrink-0">
@@ -6800,7 +6776,30 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
           
           <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={`px-3 py-2 border rounded-lg text-xs min-w-[160px] flex-1 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : ''}`} placeholder="Cari nama, NISN, RFID..." />
           
-          <button onClick={handleDownloadTemplate} className={`px-3 py-2 rounded-lg border flex items-center gap-1 text-xs font-semibold transition cursor-pointer flex-shrink-0 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>
+          {/* Tombol Template memicu Modal Pilih Kelas Terlebih Dahulu */}
+          <button 
+            onClick={() => {
+              if (activeTab === 'guru') {
+                let csvHeader = "Nama,Kode Guru,Jabatan,RFID\n\"ADE SUHARSONO, S.Pd.\",GURU001,KEPALA SEKOLAH,SW001\n";
+                const blob = new Blob([csvHeader], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'Template_Import_Guru.csv');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              } else {
+                if (daftarMasterKelas.length === 0) {
+                  alert('Harap buat Master Kelas terlebih dahulu di menu "Kelola Kelas"!');
+                  return;
+                }
+                setSelectedKelasTemplate(daftarMasterKelas[0].nama);
+                setIsTemplateModalOpen(true);
+              }
+            }} 
+            className={`px-3 py-2 rounded-lg border flex items-center gap-1 text-xs font-semibold transition cursor-pointer flex-shrink-0 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'}`}
+          >
             <Download size={14} /> Template
           </button>
 
@@ -6813,7 +6812,7 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
         </div>
       </div>
 
-      {/* BAGIAN TABEL DATA UTAMA */}
+      {/* TABEL DATA UTAMA */}
       <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100'} rounded-xl shadow-sm border flex-1 overflow-y-auto max-h-[calc(100vh-200px)] p-1`}>
         <table className="w-full text-left border-collapse">
           <thead className="sticky top-0 z-10">
@@ -6902,6 +6901,60 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
           </tbody>
         </table>
       </div>
+
+      {/* MODAL PILIH KELAS SEBELUM DOWNLOAD TEMPLATE */}
+      {isTemplateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl text-white">
+            <h3 className="text-lg font-bold mb-2">Pilih Kelas untuk Template CSV</h3>
+            <p className="text-xs text-slate-400 mb-4">Template yang diunduh akan otomatis disiapkan untuk kelas yang Anda pilih di bawah ini.</p>
+            
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-slate-300 mb-1">PILIH KELAS</label>
+              <select 
+                value={selectedKelasTemplate} 
+                onChange={(e) => setSelectedKelasTemplate(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+              >
+                {daftarMasterKelas.map((k, idx) => (
+                  <option key={idx} value={k.nama}>{k.nama} — ({k.keahlian})</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button 
+                onClick={() => setIsTemplateModalOpen(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm transition cursor-pointer"
+              >
+                Batal
+              </button>
+              <button 
+                onClick={() => {
+                  const masterKls = daftarMasterKelas.find(k => k.nama === selectedKelasTemplate);
+                  const keahlianDefault = masterKls ? masterKls.keahlian : 'Konsentrasi Umum';
+
+                  const csvContent = "data:text/csv;charset=utf-8,Nama Lengkap,NISN,Kelas,Konsentrasi Keahlian,RFID\n" +
+                                     `Contoh Siswa,2026001,${selectedKelasTemplate},${keahlianDefault},RFID-001\n`;
+                  
+                  const encodedUri = encodeURI(csvContent);
+                  const link = document.createElement("a");
+                  link.setAttribute("href", encodedUri);
+                  link.setAttribute("download", `Template_Siswa_${selectedKelasTemplate.replace(/\s+/g, '_')}.csv`);
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+
+                  setIsTemplateModalOpen(false);
+                }}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition cursor-pointer"
+              >
+                Download Template
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL KELOLA DAFTAR KELAS & KEAHLIAN MASTER */}
       {isKelasModalOpen && (
