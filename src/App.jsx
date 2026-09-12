@@ -4632,23 +4632,38 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
 };
 
 /* ==============================================================
-   10. KOMPONEN CETAK KARTU RFID & QR CODE DIGITAL
+   10. KOMPONEN CETAK KARTU RFID & QR CODE DIGITAL (RESPONSIF & FIX KELAS)
 ============================================================== */
 const KontenCetakKartu = ({ dataGuru, dataSiswa, infoSekolah, isDarkMode, tahunPelajaranAktif }) => {
   const [selectedType, setSelectedType] = useState('siswa');
-  const siswaAktifTP = dataSiswa.filter(s => (s.statusTP?.[tahunPelajaranAktif] || 'Aktif') === 'Aktif' && s.kelasPerTP?.[tahunPelajaranAktif]);
+
+  // Helper aman untuk ambil kelas siswa berdasarkan TP aktif
+  const getKelasSiswaTP = (siswa) => {
+    let ko = siswa.kelasPerTP;
+    if (typeof ko === 'string') {
+      try { ko = JSON.parse(ko); } catch(e) { ko = {}; }
+    }
+    return (ko?.[tahunPelajaranAktif] || siswa.jabatan_kelas || '').trim();
+  };
+
+  const siswaAktifTP = dataSiswa.filter(s => {
+    const statusTP = s.statusTP?.[tahunPelajaranAktif] || 'Aktif';
+    const kls = getKelasSiswaTP(s);
+    return statusTP === 'Aktif' && kls !== '';
+  });
   
   const [modeCetak, setModeCetak] = useState('perorangan'); 
   const [selectedKelas, setSelectedKelas] = useState('');
-  
-  // State untuk filter kelas pada mode perorangan siswa
   const [selectedPeroranganKelas, setSelectedPeroranganKelas] = useState('');
 
-  const daftarKelasUnik = [...new Set(siswaAktifTP.map(s => s.kelasPerTP?.[tahunPelajaranAktif]).filter(Boolean))].sort();
+  // AMBIL DAFTAR KELAS UNIK SECARA AMAN
+  const daftarKelasUnik = [...new Set(
+    dataSiswa.map(s => getKelasSiswaTP(s)).filter(Boolean)
+  )].sort();
 
   // Daftar siswa terfilter berdasarkan kelas di mode perorangan
   const siswaPeroranganList = selectedPeroranganKelas 
-    ? siswaAktifTP.filter(s => s.kelasPerTP?.[tahunPelajaranAktif] === selectedPeroranganKelas)
+    ? siswaAktifTP.filter(s => getKelasSiswaTP(s) === selectedPeroranganKelas)
     : siswaAktifTP;
 
   const activeList = selectedType === 'siswa' ? siswaPeroranganList : dataGuru;
@@ -4661,7 +4676,7 @@ const KontenCetakKartu = ({ dataGuru, dataSiswa, infoSekolah, isDarkMode, tahunP
   const [teksBelakang3, setTeksBelakang3] = useState('3. Jika kartu hilang, segera laporkan ke bagian administrasi.');
 
   const siswaPerKelasList = selectedKelas 
-    ? siswaAktifTP.filter(s => s.kelasPerTP?.[tahunPelajaranAktif] === selectedKelas)
+    ? siswaAktifTP.filter(s => getKelasSiswaTP(s) === selectedKelas)
     : siswaAktifTP;
 
   const handleTypeChange = (type) => {
@@ -4678,13 +4693,13 @@ const KontenCetakKartu = ({ dataGuru, dataSiswa, infoSekolah, isDarkMode, tahunP
   };
 
   const renderKartuItem = (person, roleOrClass) => {
-    // Barcode unik menggunakan rfid / kodeGuru / nisn di belakang layar
     const kodeUnik = selectedType === 'siswa' 
       ? (person.rfid || person.nisn || `SISWA-${person.id}`)
       : (person.rfid || person.kodeGuru || `GURU-${person.id}`);
 
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(kodeUnik)}`;
     const nomorIdentitasSiswa = person.nisn || '-';
+    const kelasLabel = selectedType === 'siswa' ? getKelasSiswaTP(person) : (person.jabatan_kelas || 'Staff Pengajar');
 
     return (
       <div key={person.id || person.rfid} className="flex flex-col sm:flex-row gap-4 justify-center items-center w-full mb-4 break-inside-avoid">
@@ -4719,14 +4734,13 @@ const KontenCetakKartu = ({ dataGuru, dataSiswa, infoSekolah, isDarkMode, tahunP
               <div className="overflow-hidden flex-1 space-y-0.5">
                 <h4 className={`font-bold text-xs truncate ${temaDesain === 'minimalist' ? 'text-slate-900' : 'text-white'}`}>{person.nama}</h4>
                 
-                {/* TAMPILAN KARTU DEPAN: NISN untuk Siswa, Jabatan untuk Guru (Tanpa teks label kode guru) */}
                 {selectedType === 'siswa' ? (
                   <p className={`text-[10px] font-semibold truncate ${temaDesain === 'dark_gold' ? 'text-amber-300' : temaDesain === 'minimalist' ? 'text-blue-600' : 'text-blue-200'}`}>
-                    NISN: {nomorIdentitasSiswa}
+                    NISN: {nomorIdentitasSiswa} &bull; {kelasLabel}
                   </p>
                 ) : (
                   <p className={`text-[10px] font-semibold truncate ${temaDesain === 'dark_gold' ? 'text-amber-300' : temaDesain === 'minimalist' ? 'text-blue-600' : 'text-blue-200'}`}>
-                    {person.jabatan_kelas || 'Staff Pengajar'}
+                    {kelasLabel}
                   </p>
                 )}
 
@@ -4771,7 +4785,7 @@ const KontenCetakKartu = ({ dataGuru, dataSiswa, infoSekolah, isDarkMode, tahunP
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="flex flex-col h-full space-y-4 overflow-y-auto pb-6 max-w-5xl mx-auto">
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           * {
@@ -4790,13 +4804,13 @@ const KontenCetakKartu = ({ dataGuru, dataSiswa, infoSekolah, isDarkMode, tahunP
         }
       `}} />
 
-      <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100 text-gray-800'} p-6 rounded-xl shadow-sm border flex flex-col md:flex-row justify-between items-center gap-4 no-print`}>
+      <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100 text-gray-800'} p-4 md:p-6 rounded-xl shadow-sm border flex flex-col md:flex-row justify-between items-center gap-4 no-print`}>
         <div>
-          <h3 className="text-xl font-bold">Studio Desain & Cetak ID Card</h3>
-          <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Cetak kartu RFID & QR Code perorangan, per kelas, atau massal guru & staff dengan QR Code aktif.</p>
+          <h3 className="text-lg md:text-xl font-bold">Studio Desain & Cetak ID Card</h3>
+          <p className={`text-xs md:text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Cetak kartu RFID & QR Code perorangan, per kelas, atau massal guru & staff dengan QR Code aktif.</p>
         </div>
-        <button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow transition cursor-pointer">
-          <Printer size={18} /> 
+        <button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow transition cursor-pointer text-xs md:text-sm whitespace-nowrap">
+          <Printer size={16} /> 
           {modeCetak === 'perorangan' ? 'Cetak Kartu Ini' : 
            modeCetak === 'kelas' ? `Cetak Satu Kelas (${siswaPerKelasList.length} Kartu)` : 
            `Cetak Semua Guru (${dataGuru.length} Kartu)`}
@@ -4804,7 +4818,7 @@ const KontenCetakKartu = ({ dataGuru, dataSiswa, infoSekolah, isDarkMode, tahunP
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100'} p-5 rounded-xl shadow-sm border space-y-4 no-print`}>
+        <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100'} p-4 md:p-5 rounded-xl shadow-sm border space-y-4 no-print`}>
           
           <div className={`flex ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border'} p-1 rounded-lg`}>
             <button onClick={() => handleTypeChange('siswa')} className={`flex-1 py-2 text-xs font-semibold rounded-md transition cursor-pointer ${selectedType === 'siswa' ? 'bg-blue-600 text-white shadow' : 'opacity-70'}`}>Siswa</button>
@@ -4873,7 +4887,7 @@ const KontenCetakKartu = ({ dataGuru, dataSiswa, infoSekolah, isDarkMode, tahunP
                   value={selectedPeroranganKelas}
                   onChange={(e) => {
                     setSelectedPeroranganKelas(e.target.value);
-                    const filtered = e.target.value ? siswaAktifTP.filter(s => s.kelasPerTP?.[tahunPelajaranAktif] === e.target.value) : siswaAktifTP;
+                    const filtered = e.target.value ? siswaAktifTP.filter(s => getKelasSiswaTP(s) === e.target.value) : siswaAktifTP;
                     setSelectedPerson(filtered[0] || null);
                   }}
                   className={`w-full border p-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-200'}`}
@@ -4898,7 +4912,7 @@ const KontenCetakKartu = ({ dataGuru, dataSiswa, infoSekolah, isDarkMode, tahunP
                   {activeList.length > 0 ? (
                     activeList.map(item => (
                       <option key={item.id} value={item.id} className="bg-slate-900 text-white">
-                        {item.nama} ({item.kelasPerTP[tahunPelajaranAktif]})
+                        {item.nama} ({getKelasSiswaTP(item)})
                       </option>
                     ))
                   ) : (
@@ -4975,17 +4989,17 @@ const KontenCetakKartu = ({ dataGuru, dataSiswa, infoSekolah, isDarkMode, tahunP
 
         </div>
 
-        <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100'} md:col-span-2 p-8 rounded-xl shadow-sm border flex flex-col items-center justify-center space-y-8 overflow-y-auto max-h-[700px]`}>
+        <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100'} md:col-span-2 p-6 md:p-8 rounded-xl shadow-sm border flex flex-col items-center justify-center space-y-8 overflow-y-auto max-h-[700px]`}>
           
           {modeCetak === 'perorangan' && selectedPerson ? (
             <div id="printable-card-area" className="flex flex-col sm:flex-row gap-6 justify-center items-center w-full">
-              {renderKartuItem(selectedPerson, selectedType === 'siswa' ? selectedPerson.kelasPerTP?.[tahunPelajaranAktif] : selectedPerson.jabatan_kelas)}
+              {renderKartuItem(selectedPerson, getKelasSiswaTP(selectedPerson))}
             </div>
           ) : modeCetak === 'kelas' ? (
             <div id="printable-card-area" className="flex flex-col items-center gap-6 w-full">
               {selectedKelas ? (
                 siswaPerKelasList.length > 0 ? (
-                  siswaPerKelasList.map((siswa) => renderKartuItem(siswa, siswa.kelasPerTP?.[tahunPelajaranAktif]))
+                  siswaPerKelasList.map((siswa) => renderKartuItem(siswa, getKelasSiswaTP(siswa)))
                 ) : (
                   <p className="text-gray-400 text-sm py-12">Tidak ada siswa di kelas {selectedKelas}.</p>
                 )
@@ -5005,7 +5019,7 @@ const KontenCetakKartu = ({ dataGuru, dataSiswa, infoSekolah, isDarkMode, tahunP
             <p className="text-gray-400 text-sm">Belum ada data yang dipilih.</p>
           )}
 
-          <p className="text-xs text-gray-400 italic no-print">*Kartu bersih, profesional, awet dipakai sampai lulus, dan dilengkapi QR Code serta RFID aktif.</p>
+          <p className="text-xs text-gray-400 italic no-print text-center">*Kartu bersih, profesional, awet dipakai sampai lulus, dan dilengkapi QR Code serta RFID aktif.</p>
         </div>
       </div>
     </div>
