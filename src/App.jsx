@@ -2917,7 +2917,7 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
 };
 
 /* ==============================================================
-   4. KOMPONEN MODE INFO SEKOLAH (LAYAR TV & RUNNING TEXT)
+   4. KOMPONEN MODE INFO SEKOLAH (LAYAR TV & RUNNING TEXT - RESPONSIF HP/PC)
 ============================================================== */
 const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -3009,7 +3009,7 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
   );
 
   return (
-    <div className="h-screen w-screen bg-slate-950 flex flex-col justify-between p-6 text-white overflow-hidden absolute inset-0 z-50">
+    <div className="min-h-screen w-full bg-slate-950 flex flex-col justify-between p-4 md:p-6 text-white overflow-y-auto">
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes marquee {
           0% { transform: translateX(100%); }
@@ -3029,7 +3029,7 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
         <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 w-full lg:w-auto">
           <button 
             onClick={onBack}
-            className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition text-sm font-semibold shadow-md flex-grow lg:flex-grow-0"
+            className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition text-sm font-semibold shadow-md flex-grow lg:flex-grow-0 cursor-pointer"
           >
             <ArrowLeft size={18} /> Kembali ke Dasbor
           </button>
@@ -3080,8 +3080,8 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
 
       </div>
 
-      {/* KONTEN UTAMA (DIPERBESAR AGAR PAS DI LAYAR TV) */}
-      <div className="space-y-6 my-auto max-w-7xl mx-auto w-full px-2">
+      {/* KONTEN UTAMA (DIPERBESAR AGAR PAS DI LAYAR TV & HP) */}
+      <div className="space-y-6 my-auto max-w-7xl mx-auto w-full px-2 py-4">
         
         {/* 3 KOTAK STATISTIK UTAMA */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
@@ -3110,7 +3110,7 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
             <Layers size={18} /> Rekap Kehadiran Siswa Per Kelas Hari Ini
           </h3>
           
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 md:gap-3.5 max-h-[180px] md:max-h-[220px] overflow-y-auto pr-1">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 md:gap-3.5 max-h-[200px] md:max-h-[220px] overflow-y-auto pr-1">
             {daftarKelasAktif.length > 0 ? (
               daftarKelasAktif.map((namaKelas, idx) => {
                 const totalSiswaDiKelas = dataSiswa.filter(s => 
@@ -3142,7 +3142,7 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
       </div>
 
       {/* RUNNING TEXT */}
-      <div className="bg-blue-900/50 border border-blue-500/40 rounded-2xl p-3 overflow-hidden relative flex items-center shadow-xl">
+      <div className="bg-blue-900/50 border border-blue-500/40 rounded-2xl p-3 overflow-hidden relative flex items-center shadow-xl mt-4">
         <div className="bg-blue-600 text-white text-[11px] md:text-xs font-bold px-3 py-1.5 rounded-xl uppercase tracking-wider mr-3 flex-shrink-0 z-10 shadow">
           Pengumuman
         </div>
