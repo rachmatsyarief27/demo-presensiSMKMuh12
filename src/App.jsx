@@ -6269,6 +6269,20 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
   
   const [daftarMasterKelas, setDaftarMasterKelas] = useState([]);
 
+// ---> TAMBAHKAN KODE INI <---
+  useEffect(() => {
+    const ambilMasterKelasSupabase = async () => {
+      const { data, error } = await supabase.from('master_kelas').select('*');
+      if (data) {
+        setDaftarMasterKelas(data);
+      } else if (error) {
+        console.log('Gagal memuat master kelas:', error.message);
+      }
+    };
+    ambilMasterKelasSupabase();
+  }, []);
+  // -----------------------------
+  
   const [isKelasModalOpen, setIsKelasModalOpen] = useState(false);
   const [inputNamaKelas, setInputNamaKelas] = useState('');
   const [inputKeahlian, setInputKeahlian] = useState('');
