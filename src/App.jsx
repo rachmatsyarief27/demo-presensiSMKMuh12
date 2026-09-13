@@ -3767,26 +3767,64 @@ const KontenJadwalPiket = ({ jadwalPiket, setJadwalPiket, daftarGuru, isDarkMode
 };
 
 /* ==============================================================
-   7. KOMPONEN POIN DISIPLIN & PELANGGARAN
+   7. KOMPONEN POIN DISIPLIN & PELANGGARAN (CLEAN & FIXED)
 ============================================================== */
 const KontenPoinDisiplin = ({ dataSiswa, dataPelanggaran, setDataPelanggaran, isDarkMode, tahunPelajaranAktif }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const siswaAktifTP = dataSiswa.filter(s => (s.statusTP?.[tahunPelajaranAktif] || 'Aktif') === 'Aktif' && s.kelasPerTP?.[tahunPelajaranAktif]);
-  const daftarKelas = ['Semua', ...new Set(siswaAktifTP.map(s => s.kelasPerTP[tahunPelajaranAktif]))];
+  // Sinkronisasi pemetaan kelas siswa agar sama persis dengan Master Data
+  const siswaDenganKelas = (Array.isArray(dataSiswa) ? dataSiswa : []).map(s => {
+    let kelasObj = s.kelasPerTP;
+    if (typeof kelasObj === 'string') {
+      try { kelasObj = JSON.parse(kelasObj); } catch (e) { kelasObj = {}; }
+    }
+    const kelasSiswa = (kelasObj?.[tahunPelajaranAktif] || s.kelas || 'BELUM DIATUR').trim().toUpperCase();
+
+    let statusObj = s.statusTP;
+    if (typeof statusObj === 'string') {
+      try { statusObj = JSON.parse(statusObj); } catch (e) { statusObj = {}; }
+    }
+    const statusAktifTP = statusObj?.[tahunPelajaranAktif] || 'Aktif';
+
+    return {
+      ...s,
+      jabatan_kelas: kelasSiswa,
+      statusAktifTP: statusAktifTP
+    };
+  });
+
+  const siswaAktifTP = siswaDenganKelas.filter(s => s.statusAktifTP === 'Aktif' && s.jabatan_kelas !== 'BELUM DIATUR');
+  
+  const daftarKelas = ['Semua', ...new Set(siswaAktifTP.map(s => s.jabatan_kelas))].sort();
+  const daftarKelasModal = [...new Set(siswaAktifTP.map(s => s.jabatan_kelas))].sort();
+
+  const daftarBulan = [
+    'Semua Bulan', 
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
 
   const [selectedKelasFilter, setSelectedKelasFilter] = useState('Semua');
-  const [selectedSiswaId, setSelectedSiswaId] = useState(siswaAktifTP[0]?.id || '');
+  const [selectedBulanFilter, setSelectedBulanFilter] = useState('Semua Bulan');
+  
+  const [selectedKelasModal, setSelectedKelasModal] = useState(daftarKelasModal[0] || '');
+  const [selectedSiswaId, setSelectedSiswaId] = useState('');
   const [jenisPelanggaran, setJenisPelanggaran] = useState('');
   const [poin, setPoin] = useState(5);
 
-  const siswaForModal = selectedKelasFilter === 'Semua' 
-    ? siswaAktifTP 
-    : siswaAktifTP.filter(s => s.kelasPerTP[tahunPelajaranAktif] === selectedKelasFilter);
+  const siswaForModal = siswaAktifTP.filter(s => s.jabatan_kelas === selectedKelasModal);
+
+  const handleOpenModal = () => {
+    const defaultKelas = daftarKelasModal[0] || '';
+    setSelectedKelasModal(defaultKelas);
+    const initialSiswa = siswaAktifTP.filter(s => s.jabatan_kelas === defaultKelas);
+    setSelectedSiswaId(initialSiswa[0]?.id || '');
+    setIsModalOpen(true);
+  };
 
   const handleAddPelanggaran = async (e) => {
     e.preventDefault();
-    const targetSiswa = dataSiswa.find(s => s.id.toString() === selectedSiswaId.toString());
+    const targetSiswa = siswaAktifTP.find(s => s.id.toString() === selectedSiswaId.toString());
     if (!targetSiswa) return;
 
     const parsedPoin = parseInt(poin);
@@ -3798,13 +3836,12 @@ const KontenPoinDisiplin = ({ dataSiswa, dataPelanggaran, setDataPelanggaran, is
     const newRecord = {
       tanggal: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
       nama_siswa: targetSiswa.nama,
-      kelas: targetSiswa.kelasPerTP[tahunPelajaranAktif] || '-',
+      kelas: targetSiswa.jabatan_kelas,
       jenis_pelanggaran: jenisPelanggaran,
       poin: parsedPoin,
       tahun_pelajaran: tahunPelajaranAktif
     };
 
-    // 1. Simpan ke Supabase Cloud
     const { data, error } = await supabase
       .from('data_pelanggaran')
       .insert([newRecord])
@@ -3816,7 +3853,6 @@ const KontenPoinDisiplin = ({ dataSiswa, dataPelanggaran, setDataPelanggaran, is
       return;
     }
 
-    // 2. Jika sukses, masukkan ke state lokal dengan format yang sesuai
     if (data && data.length > 0) {
       const formattedRecord = {
         id: data[0].id,
@@ -3837,7 +3873,6 @@ const KontenPoinDisiplin = ({ dataSiswa, dataPelanggaran, setDataPelanggaran, is
 
   const handleDeletePelanggaran = async (id) => {
     if (window.confirm('Hapus catatan pelanggaran ini?')) {
-      // 1. Hapus dari Supabase Cloud
       const { error } = await supabase
         .from('data_pelanggaran')
         .delete()
@@ -3849,29 +3884,33 @@ const KontenPoinDisiplin = ({ dataSiswa, dataPelanggaran, setDataPelanggaran, is
         return;
       }
 
-      // 2. Hapus dari state lokal
       setDataPelanggaran(dataPelanggaran.filter(p => p.id !== id));
     }
   };
 
-  const currentPelanggaran = dataPelanggaran.filter(p => p.tahunPelajaran === tahunPelajaranAktif);
+  const currentPelanggaran = Array.isArray(dataPelanggaran) ? dataPelanggaran.filter(p => p.tahunPelajaran === tahunPelajaranAktif) : [];
+
+  const filteredPelanggaran = currentPelanggaran.filter(item => {
+    const matchKelas = selectedKelasFilter === 'Semua' || (item.kelas && item.kelas.trim().toUpperCase() === selectedKelasFilter.trim().toUpperCase());
+    let matchBulan = true;
+    if (selectedBulanFilter !== 'Semua Bulan') {
+      matchBulan = item.tanggal && item.tanggal.toLowerCase().includes(selectedBulanFilter.toLowerCase().substring(0, 3));
+    }
+    return matchKelas && matchBulan;
+  });
 
   const rekapPoinSiswa = siswaAktifTP
-    .filter(siswa => selectedKelasFilter === 'Semua' || siswa.kelasPerTP[tahunPelajaranAktif] === selectedKelasFilter)
+    .filter(siswa => selectedKelasFilter === 'Semua' || siswa.jabatan_kelas.trim().toUpperCase() === selectedKelasFilter.trim().toUpperCase())
     .map(siswa => {
-      const pelanggaranSiswa = currentPelanggaran.filter(p => p.namaSiswa.toLowerCase() === siswa.nama.toLowerCase());
+      const pelanggaranSiswa = filteredPelanggaran.filter(p => p.namaSiswa && p.namaSiswa.toLowerCase() === siswa.nama.toLowerCase());
       const totalPoin = pelanggaranSiswa.reduce((acc, curr) => acc + curr.poin, 0);
       return {
         ...siswa,
-        kelas: siswa.kelasPerTP[tahunPelajaranAktif],
+        kelas: siswa.jabatan_kelas,
         totalPoin,
         statusDisiplin: totalPoin >= 50 ? 'Bahaya (SP)' : totalPoin >= 25 ? 'Peringatan' : 'Aman'
       };
     });
-
-  const filteredPelanggaran = selectedKelasFilter === 'Semua'
-    ? currentPelanggaran
-    : currentPelanggaran.filter(p => p.kelas.toLowerCase() === selectedKelasFilter.toLowerCase());
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -3880,9 +3919,23 @@ const KontenPoinDisiplin = ({ dataSiswa, dataPelanggaran, setDataPelanggaran, is
           <h3 className="text-xl font-bold">Modul Poin Disiplin & Pelanggaran ({tahunPelajaranAktif})</h3>
           <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Pantau catatan kedisiplinan dan akumulasi poin pelanggaran siswa per kelas secara real-time cloud.</p>
         </div>
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          
+          {/* FILTER BULAN */}
           <div className="flex items-center gap-2">
-            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-500'} uppercase tracking-wider`}>Filter Kelas:</span>
+            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-500'} uppercase tracking-wider`}>Bulan:</span>
+            <select 
+              value={selectedBulanFilter} 
+              onChange={(e) => setSelectedBulanFilter(e.target.value)} 
+              className={`border px-3 py-2 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-purple-400' : 'bg-purple-50 border-gray-200 text-purple-700'}`}
+            >
+              {daftarBulan.map(b => <option key={b} value={b} className="bg-slate-900 text-white">{b}</option>)}
+            </select>
+          </div>
+
+          {/* FILTER KELAS */}
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-500'} uppercase tracking-wider`}>Kelas:</span>
             <select 
               value={selectedKelasFilter} 
               onChange={(e) => setSelectedKelasFilter(e.target.value)} 
@@ -3891,11 +3944,9 @@ const KontenPoinDisiplin = ({ dataSiswa, dataPelanggaran, setDataPelanggaran, is
               {daftarKelas.map(k => <option key={k} value={k} className="bg-slate-900 text-white">{k}</option>)}
             </select>
           </div>
+
           <button 
-            onClick={() => {
-              setSelectedSiswaId(siswaForModal[0]?.id || '');
-              setIsModalOpen(true);
-            }}
+            onClick={handleOpenModal}
             className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow transition cursor-pointer text-sm whitespace-nowrap"
           >
             <Plus size={18} /> Catat Pelanggaran
@@ -3912,7 +3963,7 @@ const KontenPoinDisiplin = ({ dataSiswa, dataPelanggaran, setDataPelanggaran, is
                 <div key={siswa.id} className={`p-3 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-gray-50 border text-gray-800'} rounded-xl flex justify-between items-center`}>
                   <div>
                     <p className="font-bold text-sm">{siswa.nama}</p>
-                    <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>{siswa.kelas}</p>
+                    <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>{siswa.jabatan_kelas}</p>
                   </div>
                   <div className="text-right">
                     <span className={`px-2 py-1 rounded text-xs font-bold ${
@@ -3926,14 +3977,14 @@ const KontenPoinDisiplin = ({ dataSiswa, dataPelanggaran, setDataPelanggaran, is
                 </div>
               ))
             ) : (
-              <p className="text-center py-8 text-gray-400 text-xs italic">Tidak ada data siswa aktif untuk tahun pelajaran {tahunPelajaranAktif}.</p>
+              <p className="text-center py-8 text-gray-400 text-xs italic">Tidak ada data siswa untuk filter yang dipilih.</p>
             )}
           </div>
         </div>
 
         <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100 text-gray-800'} lg:col-span-2 rounded-xl shadow-sm border flex flex-col`}>
           <div className={`p-6 border-b ${isDarkMode ? 'border-slate-800' : 'border-gray-100'} flex justify-between items-center`}>
-            <h4 className="font-bold">Riwayat Catatan Pelanggaran ({selectedKelasFilter})</h4>
+            <h4 className="font-bold">Riwayat Catatan Pelanggaran ({selectedKelasFilter} - {selectedBulanFilter})</h4>
           </div>
           <div className="p-2 overflow-x-auto flex-1">
             <table className="w-full text-left border-collapse">
@@ -3965,7 +4016,7 @@ const KontenPoinDisiplin = ({ dataSiswa, dataPelanggaran, setDataPelanggaran, is
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="6" className="text-center py-12 text-gray-400 text-xs italic">Belum ada catatan pelanggaran untuk tahun pelajaran {tahunPelajaranAktif}.</td>
+                    <td colSpan="6" className="text-center py-12 text-gray-400 text-xs italic">Belum ada catatan pelanggaran untuk filter yang dipilih.</td>
                   </tr>
                 )}
               </tbody>
@@ -3986,15 +4037,16 @@ const KontenPoinDisiplin = ({ dataSiswa, dataPelanggaran, setDataPelanggaran, is
                 <div>
                   <label className={`block text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-500'} uppercase tracking-wider mb-1`}>Pilih Kelas</label>
                   <select 
-                    value={selectedKelasFilter} 
+                    value={selectedKelasModal} 
                     onChange={(e) => {
-                      setSelectedKelasFilter(e.target.value);
-                      const filtered = e.target.value === 'Semua' ? siswaAktifTP : siswaAktifTP.filter(s => s.kelasPerTP[tahunPelajaranAktif] === e.target.value);
-                      setSelectedSiswaId(filtered[0]?.id || '');
+                      const newKelas = e.target.value;
+                      setSelectedKelasModal(newKelas);
+                      const filteredSiswa = siswaAktifTP.filter(s => s.jabatan_kelas === newKelas);
+                      setSelectedSiswaId(filteredSiswa[0]?.id || '');
                     }}
                     className={`w-full border rounded-lg p-2.5 text-sm ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white'}`}
                   >
-                    {daftarKelas.map(k => (
+                    {daftarKelasModal.map(k => (
                       <option key={k} value={k} className="bg-slate-900 text-white">Kelas: {k}</option>
                     ))}
                   </select>
@@ -4008,7 +4060,7 @@ const KontenPoinDisiplin = ({ dataSiswa, dataPelanggaran, setDataPelanggaran, is
                   >
                     {siswaForModal.length > 0 ? (
                       siswaForModal.map(s => (
-                        <option key={s.id} value={s.id} className="bg-slate-900 text-white">{s.nama} ({s.kelasPerTP[tahunPelajaranAktif]})</option>
+                        <option key={s.id} value={s.id} className="bg-slate-900 text-white">{s.nama}</option>
                       ))
                     ) : (
                       <option value="">Tidak ada siswa di kelas ini</option>
@@ -5081,7 +5133,7 @@ const KontenCetakKartu = ({ dataGuru, dataSiswa, infoSekolah, isDarkMode, tahunP
 };
 
 /* ==============================================================
-   11. KOMPONEN PENGATURAN JAM SEKOLAH & JADWAL MENGAJAR GURU
+   11. KOMPONEN PENGATURAN JAM SEKOLAH & JADWAL MENGAJAR GURU (FIXED ORDER)
 ============================================================== */
 const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setDataGuru, isDarkMode }) => {
   const [subTab, setSubTab] = useState('siswa'); // 'siswa' atau 'guru'
@@ -5133,6 +5185,8 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
     Rabu: { aktif: true, jamMulai: '07:30', jamSelesai: '15:00' },
     Kamis: { aktif: true, jamMulai: '07:30', jamSelesai: '15:00' },
     Jumat: { aktif: true, jamMulai: '07:30', jamSelesai: '14:00' },
+    Sabtu: { aktif: false, jamMulai: '07:30', jamSelesai: '12:00' },
+    Minggu: { aktif: false, jamMulai: '07:30', jamSelesai: '12:00' }
   });
 
   const handleOpenJadwal = (guru) => {
@@ -5147,6 +5201,8 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
         Rabu: { aktif: true, jamMulai: '07:30', jamSelesai: '15:00' },
         Kamis: { aktif: true, jamMulai: '07:30', jamSelesai: '15:00' },
         Jumat: { aktif: true, jamMulai: '07:30', jamSelesai: '14:00' },
+        Sabtu: { aktif: false, jamMulai: '07:30', jamSelesai: '12:00' },
+        Minggu: { aktif: false, jamMulai: '07:30', jamSelesai: '12:00' }
       });
     }
     setIsJadwalModalOpen(true);
@@ -5190,6 +5246,8 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
         Rabu: { aktif: true, jamMulai: '06:45', jamSelesai: '14:00' },
         Kamis: { aktif: true, jamMulai: '06:45', jamSelesai: '14:00' },
         Jumat: { aktif: true, jamMulai: '06:45', jamSelesai: '14:00' },
+        Sabtu: { aktif: false, jamMulai: '06:45', jamSelesai: '12:00' },
+        Minggu: { aktif: false, jamMulai: '06:45', jamSelesai: '12:00' }
       };
 
       // Update massal ke Supabase untuk semua guru
@@ -5329,7 +5387,7 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <h3 className="text-xl font-bold flex items-center gap-2"><Calendar className="text-purple-600"/> Jadwal Mengajar Harian Guru (Masuk & Pulang)</h3>
-              <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Atur jam mulai dan jam selesai mengajar harian (Senin - Jumat) untuk masing-masing guru.</p>
+              <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Atur jam mulai dan jam selesai mengajar harian (Senin - Minggu) untuk masing-masing guru.</p>
             </div>
             
             <button 
@@ -5361,7 +5419,6 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
                         <div className="text-xs text-blue-500">{guru.jabatan_kelas || 'Guru'}</div>
                       </td>
                       <td className="px-4 py-3 text-xs">
-                        {/* [FIXED] Mengecek jadwal_mengajar dari database */}
                         {guru.jadwal_mengajar ? (
                           <span className="text-green-500 font-semibold">✓ Jadwal Terkonfigurasi</span>
                         ) : (
@@ -5389,7 +5446,7 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
         </div>
       )}
 
-      {/* MODAL EDIT JADWAL MENGAJAR & PULANG PER GURU */}
+      {/* MODAL EDIT JADWAL MENGAJAR & PULANG PER GURU (FIXED URUTAN SENIN - MINGGU) */}
       {isJadwalModalOpen && selectedGuruJadwal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
           <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white text-gray-800'} w-full max-w-xl rounded-2xl shadow-xl overflow-hidden`}>
@@ -5407,61 +5464,67 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
               <div className="p-6 space-y-3 max-h-[60vh] overflow-y-auto">
                 <p className="text-xs text-slate-400 italic mb-2">Tentukan hari aktif mengajar beserta jam masuk dan jam selesainya. Nonaktifkan centang jika tidak ada jadwal di hari tersebut.</p>
                 
-                {Object.keys(formDataJadwal).map((hari) => (
-                  <div key={hari} className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border ${isDarkMode ? 'bg-slate-800/50 border-slate-700' : 'bg-gray-50 border-gray-200'}`}>
-                    <div className="flex items-center gap-3">
-                      <input 
-                        type="checkbox"
-                        checked={formDataJadwal[hari].aktif}
-                        onChange={(e) => {
-                          const val = e.target.checked;
-                          setFormDataJadwal(prev => ({
-                            ...prev,
-                            [hari]: { ...prev[hari], aktif: val }
-                          }));
-                        }}
-                        className="w-4 h-4 text-blue-600 rounded cursor-pointer"
-                      />
-                      <span className="font-bold text-sm w-20">{hari}</span>
-                    </div>
+                {['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'].map((hari) => {
+                  if (!formDataJadwal[hari]) {
+                    formDataJadwal[hari] = { aktif: false, jamMulai: '06:45', jamSelesai: '14:00' };
+                  }
 
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] text-slate-400">Masuk:</span>
+                  return (
+                    <div key={hari} className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border ${isDarkMode ? 'bg-slate-800/50 border-slate-700' : 'bg-gray-50 border-gray-200'}`}>
+                      <div className="flex items-center gap-3">
                         <input 
-                          type="time" 
-                          disabled={!formDataJadwal[hari].aktif}
-                          value={formDataJadwal[hari].jamMulai}
+                          type="checkbox"
+                          checked={formDataJadwal[hari].aktif}
                           onChange={(e) => {
-                            const val = e.target.value;
+                            const val = e.target.checked;
                             setFormDataJadwal(prev => ({
                               ...prev,
-                              [hari]: { ...prev[hari], jamMulai: val }
+                              [hari]: { ...prev[hari], aktif: val }
                             }));
                           }}
-                          className={`p-1.5 border rounded-lg text-xs font-mono ${!formDataJadwal[hari].aktif ? 'opacity-40 cursor-not-allowed' : ''} ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white'}`}
+                          className="w-4 h-4 text-blue-600 rounded cursor-pointer"
                         />
+                        <span className="font-bold text-sm w-20">{hari}</span>
                       </div>
 
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] text-slate-400">Pulang:</span>
-                        <input 
-                          type="time" 
-                          disabled={!formDataJadwal[hari].aktif}
-                          value={formDataJadwal[hari].jamSelesai}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setFormDataJadwal(prev => ({
-                              ...prev,
-                              [hari]: { ...prev[hari], jamSelesai: val }
-                            }));
-                          }}
-                          className={`p-1.5 border rounded-lg text-xs font-mono ${!formDataJadwal[hari].aktif ? 'opacity-40 cursor-not-allowed' : ''} ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white'}`}
-                        />
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] text-slate-400">Masuk:</span>
+                          <input 
+                            type="time" 
+                            disabled={!formDataJadwal[hari].aktif}
+                            value={formDataJadwal[hari].jamMulai}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setFormDataJadwal(prev => ({
+                                ...prev,
+                                [hari]: { ...prev[hari], jamMulai: val }
+                              }));
+                            }}
+                            className={`p-1.5 border rounded-lg text-xs font-mono ${!formDataJadwal[hari].aktif ? 'opacity-40 cursor-not-allowed' : ''} ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white'}`}
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] text-slate-400">Pulang:</span>
+                          <input 
+                            type="time" 
+                            disabled={!formDataJadwal[hari].aktif}
+                            value={formDataJadwal[hari].jamSelesai}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setFormDataJadwal(prev => ({
+                                ...prev,
+                                [hari]: { ...prev[hari], jamSelesai: val }
+                              }));
+                            }}
+                            className={`p-1.5 border rounded-lg text-xs font-mono ${!formDataJadwal[hari].aktif ? 'opacity-40 cursor-not-allowed' : ''} ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white'}`}
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className={`p-4 border-t ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-gray-50'} flex justify-end gap-3`}>
@@ -5698,7 +5761,7 @@ const KontenPengaturanUmum = ({ infoSekolah, setInfoSekolah, adminCredential, se
 };
 
 /* ==============================================================
-   13. KOMPONEN REKAPITULASI & CETAK RAPOR ABSENSI
+   13. KOMPONEN REKAPITULASI & CETAK RAPOR ABSENSI (FIXED & SYNCED)
 ============================================================== */
 const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataSiswa, dataGuru, dataPelanggaran, infoSekolah, isDarkMode, tahunPelajaranAktif }) => {
   const [viewingArsip, setViewingArsip] = useState(null);
@@ -5729,7 +5792,7 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
   const [selectedSiswaId, setSelectedSiswaId] = useState(siswaFiltered[0]?.id || '');
   const [showRaporModal, setShowRaporModal] = useState(false);
 
-  // MENGGABUNGKAN LOG HARIAN AKTIF DAN SELURUH DATA DARI ARSIRP TUTUP BUKU
+  // MENGGABUNGKAN LOG HARIAN AKTIF DAN SELURUH DATA DARI ARSIP TUTUP BUKU
   const allArsippedLogs = arsipAbsensi ? arsipAbsensi.flatMap(arsip => arsip.data || []) : [];
   const rawMasterLog = [...logKehadiran, ...allArsippedLogs];
   const uniqueMasterLog = Array.from(new Map(rawMasterLog.map(item => [item.id, item])).values());
@@ -5747,7 +5810,7 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
     }
   };
 
-  // FUNGSI MATRIKS BULANAN SPESIFIK (DENGAN KOLOM LUAR JADWAL)
+  // FUNGSI MATRIKS BULANAN SPESIFIK (SOLUSI FIX "TIDAK ADA JADWAL")
   const generateMatriksBulananSpesifik = (listWargaRaw, logKehadiranList, isSiswa = false, bulanTarget, tahunTarget) => {
     const listWarga = [...listWargaRaw].sort((a, b) => (a.nama || '').localeCompare(b.nama || '', 'id', { sensitivity: 'base' }));
 
@@ -5813,7 +5876,7 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
         totalHadirWarga, tepatWaktu, telat, sakit, izin, alpa
       ] : [
         index + 1, namaWarga,
-        warga.jabatan || 'Guru',
+        warga.jabatan || warga.jabatan_kelas || 'Guru',
         totalHadirWarga, tepatWaktu, telat, luarJadwal, sakit, izin, alpa
       ];
 
@@ -5839,14 +5902,22 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
           if (dateObj.getDay() === 0) {
             rowData.push('Libur', 'Libur');
           } else if (!isSiswa) {
-            const jadwalMap = warga.jadwalMengajar || warga.jadwal || {};
-            const jadwalHariIni = jadwalMap[namaHari] || jadwalMap[namaHari.toLowerCase()];
+            // DETEKSI JADWAL GURU SECARA SANGAT PRESISI & FLEKSIBEL
+            let rawJadwal = warga.jadwal_mengajar || warga.jadwalMengajar || warga.jadwal || {};
+            if (typeof rawJadwal === 'string') {
+              try { rawJadwal = JSON.parse(rawJadwal); } catch (e) { rawJadwal = {}; }
+            }
 
-            if (jadwalHariIni && jadwalHariIni.aktif === false) {
-              rowData.push('Libur Mengajar', 'Libur Mengajar');
-            } else if (!jadwalHariIni) {
+            // Cari kunci nama hari secara case-insensitive (Senin/senin/SENIN)
+            const matchedKey = Object.keys(rawJadwal).find(k => k.trim().toLowerCase() === namaHari.trim().toLowerCase());
+            const detailJadwalHariIni = matchedKey ? rawJadwal[matchedKey] : null;
+
+            if (!detailJadwalHariIni) {
               rowData.push('Tidak Ada Jadwal', 'Tidak Ada Jadwal');
+            } else if (detailJadwalHariIni.aktif === false) {
+              rowData.push('Libur Mengajar', 'Libur Mengajar');
             } else {
+              // Terjadwal aktif mengajar tapi tidak ada catatan absensi masuk
               rowData.push('-', '-');
             }
           } else {
@@ -5904,7 +5975,7 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
 
       const rowData = [
         index + 1, namaWarga,
-        isSiswa ? (warga.kelasPerTP?.[tahunPelajaranAktif] || warga.kelas || '-') : (warga.jabatan || 'Guru')
+        isSiswa ? (warga.kelasPerTP?.[tahunPelajaranAktif] || warga.kelas || '-') : (warga.jabatan || warga.jabatan_kelas || 'Guru')
       ];
 
       let grandTotalHadir = 0;
@@ -6030,7 +6101,7 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
       No: index + 1,
       Tanggal: item.tanggal,
       Nama: item.nama,
-      'Jabatan/Kelas': item.jabatan_kelas,
+      'Jabatan/Kelas': item.jabatan_kelas || item.jabatan,
       Peran: item.role || 'siswa',
       'Waktu Datang': item.waktuDatang,
       'Waktu Pulang': item.waktuPulang || '-',
@@ -6445,7 +6516,7 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
                     <tr key={item.id} className={`${isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-gray-50'}`}>
                       <td className="px-4 py-3">{idx + 1}</td>
                       <td className="px-4 py-3 font-bold">{item.nama}</td>
-                      <td className="px-4 py-3">{item.jabatan_kelas}</td>
+                      <td className="px-4 py-3">{item.jabatan_kelas || item.jabatan}</td>
                       <td className="px-4 py-3 text-green-500">{item.waktuDatang}</td>
                       <td className="px-4 py-3"><span className="px-2 py-0.5 rounded text-xs font-bold bg-green-500/10 text-green-400 border border-green-500/30">{item.status}</span></td>
                     </tr>
