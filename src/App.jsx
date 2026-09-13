@@ -4707,41 +4707,51 @@ const KontenCetakKartu = ({ dataGuru, dataSiswa, infoSekolah, isDarkMode, tahunP
           <style>
             @media print {
               * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-              body { background: white !important; margin: 0; padding: 10px; }
+              body { background: white !important; margin: 0; padding: 0; }
               .printable-card-item {
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
                 display: flex !important;
                 flex-direction: row !important;
-                flex-wrap: wrap !important;
-                gap: 15px !important;
+                flex-wrap: nowrap !important;
+                gap: 20px !important;
                 justify-content: center !important;
-                margin-bottom: 15px !important;
+                align-items: center !important;
+                margin-bottom: 20px !important;
+                width: 100% !important;
               }
             }
-            body { font-family: sans-serif; background: #f3f4f6; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+            body { 
+              font-family: sans-serif; 
+              background: #ffffff; 
+              margin: 0;
+              padding: 10px; 
+            }
             .printable-card-item { 
-              margin-bottom: 20px; 
+              margin: 0 auto 20px auto; 
               display: flex; 
               flex-direction: row; 
-              flex-wrap: wrap; 
-              gap: 15px; 
+              flex-wrap: nowrap; 
+              gap: 20px; 
               justify-content: center; 
+              align-items: center;
               background: white; 
               padding: 10px; 
-              border-radius: 8px;
+              width: 100%;
             }
           </style>
         </head>
         <body>
-          <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+          <div style="width: 100%;">
             ${printArea.innerHTML}
           </div>
           <script>
-            setTimeout(() => {
-              window.print();
-              window.close();
-            }, 600);
+            window.onload = () => {
+              setTimeout(() => {
+                window.print();
+                window.close();
+              }, 250);
+            };
           </script>
         </body>
       </html>
