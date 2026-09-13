@@ -5180,7 +5180,7 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
     alert(`Jadwal harian untuk ${selectedGuruJadwal.nama} berhasil disimpan ke cloud!`);
   };
 
-  // FUNGSI: TERAPKAN JAM DEFAULT MASSAL (06.45 - 14.00) UNTUK SEMUA GURU
+ // FUNGSI: TERAPKAN JAM DEFAULT MASSAL (06.45 - 14.00) UNTUK SEMUA GURU
   const handleTerapkanDefaultSemuaGuru = async () => {
     if (window.confirm('Apakah Anda yakin ingin menerapkan jadwal default (Masuk: 06.45, Pulang: 14.00, Senin-Jumat) ke SEMUA guru secara serentak ke cloud?')) {
       const defaultJadwalMasal = {
@@ -5199,9 +5199,10 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
           .eq('id', guru.id);
       }
 
+      // PERBAIKAN DI SINI: Ubah jadi jadwal_mengajar agar sinkron dengan database
       const updatedGuruList = dataGuru.map(g => ({
         ...g,
-        jadwalMengajar: defaultJadwalMasal
+        jadwal_mengajar: defaultJadwalMasal 
       }));
 
       setDataGuru(updatedGuruList);
