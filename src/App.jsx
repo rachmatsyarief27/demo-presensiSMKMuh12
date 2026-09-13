@@ -5137,8 +5137,9 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
 
   const handleOpenJadwal = (guru) => {
     setSelectedGuruJadwal(guru);
-    if (guru.jadwalMengajar) {
-      setFormDataJadwal(guru.jadwalMengajar);
+    // [FIXED] Menggunakan jadwal_mengajar sesuai database
+    if (guru.jadwal_mengajar) {
+      setFormDataJadwal(guru.jadwal_mengajar);
     } else {
       setFormDataJadwal({
         Senin: { aktif: true, jamMulai: '07:30', jamSelesai: '15:00' },
@@ -5167,10 +5168,10 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
       return;
     }
 
-    // 2. Update state lokal
+    // 2. Update state lokal menggunakan jadwal_mengajar
     const updatedGuruList = dataGuru.map(g => {
       if (g.id === selectedGuruJadwal.id) {
-        return { ...g, jadwalMengajar: formDataJadwal };
+        return { ...g, jadwal_mengajar: formDataJadwal };
       }
       return g;
     });
@@ -5180,7 +5181,7 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
     alert(`Jadwal harian untuk ${selectedGuruJadwal.nama} berhasil disimpan ke cloud!`);
   };
 
- // FUNGSI: TERAPKAN JAM DEFAULT MASSAL (06.45 - 14.00) UNTUK SEMUA GURU
+  // FUNGSI: TERAPKAN JAM DEFAULT MASSAL (06.45 - 14.00) UNTUK SEMUA GURU
   const handleTerapkanDefaultSemuaGuru = async () => {
     if (window.confirm('Apakah Anda yakin ingin menerapkan jadwal default (Masuk: 06.45, Pulang: 14.00, Senin-Jumat) ke SEMUA guru secara serentak ke cloud?')) {
       const defaultJadwalMasal = {
@@ -5199,7 +5200,7 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
           .eq('id', guru.id);
       }
 
-      // PERBAIKAN DI SINI: Ubah jadi jadwal_mengajar agar sinkron dengan database
+      // Update state lokal menggunakan jadwal_mengajar
       const updatedGuruList = dataGuru.map(g => ({
         ...g,
         jadwal_mengajar: defaultJadwalMasal 
@@ -5360,7 +5361,8 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
                         <div className="text-xs text-blue-500">{guru.jabatan_kelas || 'Guru'}</div>
                       </td>
                       <td className="px-4 py-3 text-xs">
-                        {guru.jadwalMengajar ? (
+                        {/* [FIXED] Mengecek jadwal_mengajar dari database */}
+                        {guru.jadwal_mengajar ? (
                           <span className="text-green-500 font-semibold">✓ Jadwal Terkonfigurasi</span>
                         ) : (
                           <span className="text-amber-500">⚠️ Belum diatur (Default: 07:30 - 15:00)</span>
