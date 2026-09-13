@@ -53,7 +53,7 @@ export default function DashboardKehadiran() {
 
   // ================= STATE FOTO PROFIL ADMIN =================
   const [adminPhoto, setAdminPhoto] = useState(() => {
-    return localStorage.getItem('adminPhoto') || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin';
+    return localStorage.getItem('adminPhoto') || 'https://ui-avatars.com/api/?name=Admin+Sekolah&background=1e293b&color=fff&bold=true';
   });
 
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -105,10 +105,18 @@ export default function DashboardKehadiran() {
     };
   });
 
+useEffect(() => {
+    if (infoSekolah && infoSekolah.nama) {
+      document.title = infoSekolah.nama;
+    }
+  }, [infoSekolah]);
+
   const [logKehadiran, setLogKehadiran] = useState(() => {
     const saved = localStorage.getItem('logKehadiran');
     return saved ? JSON.parse(saved) : [];
   });
+
+const [daftarMasterKelas, setDaftarMasterKelas] = useState([]);
 
   const [dataPelanggaran, setDataPelanggaran] = useState(() => {
     const saved = localStorage.getItem('dataPelanggaran');
@@ -501,9 +509,9 @@ export default function DashboardKehadiran() {
       `}>
         <div className={`flex items-center justify-between p-6 border-b ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white overflow-hidden flex-shrink-0 shadow-md">
-              {infoSekolah.logo ? <img src={infoSekolah.logo} alt="Logo" className="w-full h-full object-cover" /> : <School size={24} />}
-            </div>
+           <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-blue-600 overflow-hidden flex-shrink-0 shadow-md border border-gray-100 p-0.5">
+  {infoSekolah.logo ? <img src={infoSekolah.logo} alt="Logo" className="w-full h-full object-contain" /> : <School size={24} />}
+</div>
             <div>
               <h1 className={`font-bold text-xs ${isDarkMode ? 'text-white' : 'text-gray-900'} leading-tight`}>
                 PRESENSI KEHADIRAN<br/>SEKOLAH
@@ -3055,8 +3063,8 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
 
         {/* TENGAH: INFO SEKOLAH DIPERBESAR */}
         <div className="flex items-center gap-4 text-center lg:text-left w-full lg:w-auto justify-center">
-          <div className="w-14 h-14 md:w-16 md:h-16 bg-blue-600 rounded-2xl flex items-center justify-center overflow-hidden shadow-xl shadow-blue-600/40 flex-shrink-0 border-2 border-white/20">
-            {infoSekolah.logo ? <img src={infoSekolah.logo} alt="Logo" className="w-full h-full object-cover" /> : <School size={36} />}
+          <div className="w-14 h-14 md:w-16 md:h-16 bg-white rounded-2xl flex items-center justify-center overflow-hidden shadow-xl shadow-black/10 flex-shrink-0 border-2 border-white/20 p-1">
+            {infoSekolah.logo ? <img src={infoSekolah.logo} alt="Logo" className="w-full h-full object-contain" /> : <School size={36} className="text-blue-600" />}
           </div>
           <div>
             <h1 className="text-xl md:text-3xl font-black tracking-wider uppercase text-blue-400 leading-tight">{infoSekolah.nama}</h1>
