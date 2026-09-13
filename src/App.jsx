@@ -5761,14 +5761,38 @@ const KontenPengaturanUmum = ({ infoSekolah, setInfoSekolah, adminCredential, se
 };
 
 /* ==============================================================
-   13. KOMPONEN REKAPITULASI & CETAK RAPOR ABSENSI (FIXED & SYNCED)
+   13. KOMPONEN REKAPITULASI & CETAK RAPOR ABSENSI (FULLY SYNCED)
 ============================================================== */
 const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataSiswa, dataGuru, dataPelanggaran, infoSekolah, isDarkMode, tahunPelajaranAktif }) => {
   const [viewingArsip, setViewingArsip] = useState(null);
   const [searchArsip, setSearchArsip] = useState('');
   
-  const siswaAktifTP = dataSiswa.filter(s => (s.statusTP?.[tahunPelajaranAktif] || 'Aktif') === 'Aktif' && s.kelasPerTP?.[tahunPelajaranAktif]);
-  const daftarKelas = ['Semua', ...new Set(siswaAktifTP.map(s => s.kelasPerTP[tahunPelajaranAktif]))];
+  // [FIXED] Filter siswa aktif yang lebih fleksibel dan tahan banting membaca struktur Supabase
+  const siswaAktifTP = dataSiswa.filter(s => {
+    let statusObj = s.statusTP;
+    if (typeof statusObj === 'string') {
+      try { statusObj = JSON.parse(statusObj); } catch (e) { statusObj = {}; }
+    }
+    const status = statusObj?.[tahunPelajaranAktif] || s.status_tp || s.status || 'Aktif';
+    if (status.toLowerCase() !== 'aktif') return false;
+
+    let kelasObj = s.kelasPerTP;
+    if (typeof kelasObj === 'string') {
+      try { kelasObj = JSON.parse(kelasObj); } catch (e) { kelasObj = {}; }
+    }
+    const kelasSiswa = kelasObj?.[tahunPelajaranAktif] || s.jabatan_kelas || s.kelas;
+    
+    return Boolean(kelasSiswa);
+  });
+
+  const daftarKelas = ['Semua', ...new Set(siswaAktifTP.map(s => {
+    let kelasObj = s.kelasPerTP;
+    if (typeof kelasObj === 'string') {
+      try { kelasObj = JSON.parse(kelasObj); } catch (e) { kelasObj = {}; }
+    }
+    return (kelasObj?.[tahunPelajaranAktif] || s.jabatan_kelas || s.kelas || '').trim().toUpperCase();
+  }).filter(Boolean))];
+
   const [selectedKelas, setSelectedKelas] = useState('Semua');
   const [selectedPeriode, setSelectedPeriode] = useState('Bulanan'); 
 
@@ -5787,7 +5811,14 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
 
   const siswaFiltered = selectedKelas === 'Semua' 
     ? siswaAktifTP 
-    : siswaAktifTP.filter(s => s.kelasPerTP[tahunPelajaranAktif] === selectedKelas);
+    : siswaAktifTP.filter(s => {
+        let kelasObj = s.kelasPerTP;
+        if (typeof kelasObj === 'string') {
+          try { kelasObj = JSON.parse(kelasObj); } catch (e) { kelasObj = {}; }
+        }
+        const kSiswa = (kelasObj?.[tahunPelajaranAktif] || s.jabatan_kelas || s.kelas || '').trim().toUpperCase();
+        return kSiswa === selectedKelas.trim().toUpperCase();
+      });
 
   const [selectedSiswaId, setSelectedSiswaId] = useState(siswaFiltered[0]?.id || '');
   const [showRaporModal, setShowRaporModal] = useState(false);
@@ -5802,7 +5833,14 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
 
   const handleKelasChange = (kelasBaru) => {
     setSelectedKelas(kelasBaru);
-    const listSiswa = kelasBaru === 'Semua' ? siswaAktifTP : siswaAktifTP.filter(s => s.kelasPerTP[tahunPelajaranAktif] === kelasBaru);
+    const listSiswa = kelasBaru === 'Semua' ? siswaAktifTP : siswaAktifTP.filter(s => {
+      let kelasObj = s.kelasPerTP;
+      if (typeof kelasObj === 'string') {
+        try { kelasObj = JSON.parse(kelasObj); } catch (e) { kelasObj = {}; }
+      }
+      const kSiswa = (kelasObj?.[tahunPelajaranAktif] || s.jabatan_kelas || s.kelas || '').trim().toUpperCase();
+      return kSiswa === kelasBaru.trim().toUpperCase();
+    });
     if (listSiswa.length > 0) {
       setSelectedSiswaId(listSiswa[0].id);
     } else {
@@ -5870,9 +5908,15 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
 
       const totalHadirWarga = isSiswa ? (tepatWaktu + telat) : (tepatWaktu + telat + luarJadwal);
 
+      let kelasObjSiswa = warga.kelasPerTP;
+      if (typeof kelasObjSiswa === 'string') {
+        try { kelasObjSiswa = JSON.parse(kelasObjSiswa); } catch (e) { kelasObjSiswa = {}; }
+      }
+      const kelasFinalSiswa = kelasObjSiswa?.[tahunPelajaranAktif] || warga.kelas || '-';
+
       const rowData = isSiswa ? [
         index + 1, namaWarga,
-        warga.kelasPerTP?.[tahunPelajaranAktif] || warga.kelas || '-',
+        kelasFinalSiswa,
         totalHadirWarga, tepatWaktu, telat, sakit, izin, alpa
       ] : [
         index + 1, namaWarga,
@@ -5902,13 +5946,11 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
           if (dateObj.getDay() === 0) {
             rowData.push('Libur', 'Libur');
           } else if (!isSiswa) {
-            // DETEKSI JADWAL GURU SECARA SANGAT PRESISI & FLEKSIBEL
             let rawJadwal = warga.jadwal_mengajar || warga.jadwalMengajar || warga.jadwal || {};
             if (typeof rawJadwal === 'string') {
               try { rawJadwal = JSON.parse(rawJadwal); } catch (e) { rawJadwal = {}; }
             }
 
-            // Cari kunci nama hari secara case-insensitive (Senin/senin/SENIN)
             const matchedKey = Object.keys(rawJadwal).find(k => k.trim().toLowerCase() === namaHari.trim().toLowerCase());
             const detailJadwalHariIni = matchedKey ? rawJadwal[matchedKey] : null;
 
@@ -5917,7 +5959,6 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
             } else if (detailJadwalHariIni.aktif === false) {
               rowData.push('Libur Mengajar', 'Libur Mengajar');
             } else {
-              // Terjadwal aktif mengajar tapi tidak ada catatan absensi masuk
               rowData.push('-', '-');
             }
           } else {
@@ -5973,9 +6014,15 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
       const roleTarget = isSiswa ? 'siswa' : 'guru';
       const logWarga = logKehadiranList.filter(l => l.role === roleTarget && l.nama.toLowerCase() === namaWarga.toLowerCase());
 
+      let kelasObjSiswa = warga.kelasPerTP;
+      if (typeof kelasObjSiswa === 'string') {
+        try { kelasObjSiswa = JSON.parse(kelasObjSiswa); } catch (e) { kelasObjSiswa = {}; }
+      }
+      const kelasFinalSiswa = kelasObjSiswa?.[tahunPelajaranAktif] || warga.kelas || '-';
+
       const rowData = [
         index + 1, namaWarga,
-        isSiswa ? (warga.kelasPerTP?.[tahunPelajaranAktif] || warga.kelas || '-') : (warga.jabatan || warga.jabatan_kelas || 'Guru')
+        isSiswa ? kelasFinalSiswa : (warga.jabatan || warga.jabatan_kelas || 'Guru')
       ];
 
       let grandTotalHadir = 0;
@@ -6033,7 +6080,11 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
     const wb = XLSX.utils.book_new();
 
     const listGuru = dataGuru && dataGuru.length > 0 ? dataGuru : [];
-    const daftarKelasUnik = [...new Set(siswaAktifTP.map(s => s.kelasPerTP[tahunPelajaranAktif]))];
+    const daftarKelasUnik = [...new Set(siswaAktifTP.map(s => {
+      let kObj = s.kelasPerTP;
+      if (typeof kObj === 'string') { try { kObj = JSON.parse(kObj); } catch (e) { kObj = {}; } }
+      return kObj?.[tahunPelajaranAktif] || s.jabatan_kelas || s.kelas;
+    }).filter(Boolean))];
 
     if (selectedPeriode === 'Bulanan') {
       const namaBulanStr = listBulanOpsi[parseInt(selectedBulan) - 1].nama;
@@ -6045,7 +6096,12 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
       }
       if (tipeTarget === 'kelas' || tipeTarget === 'semua') {
         daftarKelasUnik.forEach(namaKelas => {
-          const siswaDiKelas = siswaAktifTP.filter(s => s.kelasPerTP[tahunPelajaranAktif] === namaKelas);
+          const siswaDiKelas = siswaAktifTP.filter(s => {
+            let kObj = s.kelasPerTP;
+            if (typeof kObj === 'string') { try { kObj = JSON.parse(kObj); } catch (e) { kObj = {}; } }
+            const kSiswa = (kObj?.[tahunPelajaranAktif] || s.jabatan_kelas || s.kelas || '').trim().toUpperCase();
+            return kSiswa === namaKelas.trim().toUpperCase();
+          });
           const sheetSiswa = generateMatriksBulananSpesifik(siswaDiKelas, currentLogKehadiran, true, selectedBulan, selectedTahun);
           const safeName = namaKelas.replace(/[\/\\\?*\[\]]/g, "_").substring(0, 31);
           XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheetSiswa), safeName);
@@ -6062,7 +6118,12 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
       }
       if (tipeTarget === 'kelas' || tipeTarget === 'semua') {
         daftarKelasUnik.forEach(namaKelas => {
-          const siswaDiKelas = siswaAktifTP.filter(s => s.kelasPerTP[tahunPelajaranAktif] === namaKelas);
+          const siswaDiKelas = siswaAktifTP.filter(s => {
+            let kObj = s.kelasPerTP;
+            if (typeof kObj === 'string') { try { kObj = JSON.parse(kObj); } catch (e) { kObj = {}; } }
+            const kSiswa = (kObj?.[tahunPelajaranAktif] || s.jabatan_kelas || s.kelas || '').trim().toUpperCase();
+            return kSiswa === namaKelas.trim().toUpperCase();
+          });
           const sheetSiswa = generateMatriksAkumulasiPeriode(siswaDiKelas, currentLogKehadiran, true, jumlahBulan);
           const safeName = namaKelas.replace(/[\/\\\?*\[\]]/g, "_").substring(0, 31);
           XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheetSiswa), safeName);
@@ -6355,7 +6416,13 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
                   </div>
                   <div>
                     <span className="text-gray-500">Kelas / Jurusan:</span>
-                    <p className="font-bold text-sm">{targetSiswa.kelasPerTP[tahunPelajaranAktif]}</p>
+                    <p className="font-bold text-sm">
+                      {(() => {
+                        let kObj = targetSiswa.kelasPerTP;
+                        if (typeof kObj === 'string') { try { kObj = JSON.parse(kObj); } catch(e){ kObj = {}; } }
+                        return kObj?.[tahunPelajaranAktif] || targetSiswa.kelas || '-';
+                      })()}
+                    </p>
                   </div>
                   <div>
                     <span className="text-gray-500">Nomor Induk RFID:</span>
