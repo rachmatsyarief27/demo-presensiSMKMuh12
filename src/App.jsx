@@ -873,23 +873,27 @@ const KontenAbsenSekolah = ({ dataGuru, dataSiswa, logKehadiran, setLogKehadiran
         } else {
           // PENENTUAN STATUS KEHADIRAN (GURU VS SISWA)
           let statusKehadiran = 'Tepat Waktu';
-
-          if (userRole === 'guru') {
+         if (userRole === 'guru') {
             const listHariIndo = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
             const namaHariIni = listHariIndo[now.getDay()];
-            const jadwalGuruHariIni = user.jadwalMengajar?.[namaHariIni];
+            
+            // [FIXED] Mendukung properti jadwal_mengajar dari database maupun jadwalMengajar
+            const rawJadwalGuru = user.jadwal_mengajar || user.jadwalMengajar || {};
+            const jadwalGuruHariIni = rawJadwalGuru[namaHariIni];
 
             if (jadwalGuruHariIni) {
               if (!jadwalGuruHariIni.aktif) {
                 statusKehadiran = 'Hadir (Luar Jadwal)';
               } else {
                 const jamMulaiGuru = jadwalGuruHariIni.jamMulai.length === 5 ? `${jadwalGuruHariIni.jamMulai}:00` : jadwalGuruHariIni.jamMulai;
+                // Tanpa toleransi: Jika waktu scan > jam mulai jadwal, langsung Terlambat!
                 statusKehadiran = currentTimeStr > jamMulaiGuru ? 'Terlambat' : 'Tepat Waktu';
               }
             } else {
               statusKehadiran = currentTimeStr > '07:30:00' ? 'Terlambat' : 'Tepat Waktu';
             }
-          } else {
+          }
+         else {
             // STATUS SISWA (Mengikuti toleransi jam sekolah mode aktif: Pagi / Siang / Full Day)
             const batasTelatRaw = activeJamConfig?.ambangTerlambat || '07:15';
             const ambangSiswa = batasTelatRaw.length === 5 ? `${batasTelatRaw}:00` : batasTelatRaw;
@@ -1053,7 +1057,7 @@ const KontenAbsenSekolah = ({ dataGuru, dataSiswa, logKehadiran, setLogKehadiran
     }
 
     return matchSearch && matchKategori;
-  });
+  }).sort((a, b) => b.id - a.id);
 
   if (sortOrder !== 'none') {
     processedLogs.sort((a, b) => {
@@ -1092,8 +1096,9 @@ const KontenAbsenSekolah = ({ dataGuru, dataSiswa, logKehadiran, setLogKehadiran
           <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100 text-gray-800'} p-3.5 rounded-xl shadow-sm border flex flex-col justify-between`}>
             <div>
               <div className="flex flex-col items-center text-center gap-1.5 mb-2">
-                <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 overflow-hidden shadow-sm flex-shrink-0">
-                  {infoSekolah.logo ? <img src={infoSekolah.logo} alt="Logo" className="w-full h-full object-cover" /> : <School size={20} />}
+                {/* Wadah logo diperbesar (w-16 h-16) dan disesuaikan mode terang/gelap */}
+                <div className={`w-16 h-16 rounded-full p-1 flex items-center justify-center text-blue-600 overflow-hidden shadow-sm border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
+                  {infoSekolah.logo ? <img src={infoSekolah.logo} alt="Logo" className="w-full h-full object-contain rounded-full" /> : <School size={28} />}
                 </div>
                 <h3 className="font-bold text-xs leading-snug line-clamp-2">{infoSekolah.nama}</h3>
               </div>
@@ -2237,8 +2242,10 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
   const namaHariIni = new Date().toLocaleDateString('id-ID', { weekday: 'long' });
   const dataPiketHariIni = jadwalPiket.find(j => j.hari.toLowerCase() === namaHariIni.toLowerCase());
 
-  const logHariIni = logKehadiran.filter(log => log.tanggal === tanggalHariIniStr && log.tahunPelajaran === tahunPelajaranAktif);
-  
+const logHariIni = logKehadiran
+  .filter(log => log.tanggal === tanggalHariIniStr && log.tahunPelajaran === tahunPelajaranAktif)
+  .sort((a, b) => b.id - a.id);
+
   const logGuruHariIni = logHariIni.filter(l => l.role === 'guru');
   const logSiswaHariIni = logHariIni.filter(l => l.role === 'siswa');
 
@@ -2347,21 +2354,23 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
           let statusKehadiran = 'Tepat Waktu';
 
           if (userRole === 'guru') {
-            const jadwalGuruHariIni = user.jadwalMengajar?.[namaHariIniIndo];
-            if (jadwalGuruHariIni) {
-              if (!jadwalGuruHariIni.aktif) {
-                statusKehadiran = 'Hadir (Luar Jadwal)';
-              } else {
-                const jamMulaiGuru = jadwalGuruHariIni.jamMulai.length === 5 ? `${jadwalGuruHariIni.jamMulai}:00` : jadwalGuruHariIni.jamMulai;
-                statusKehadiran = currentTimeStr > jamMulaiGuru ? 'Terlambat' : 'Tepat Waktu';
-              }
+          const rawJadwalGuru = user.jadwal_mengajar || user.jadwalMengajar || {};
+            const jadwalGuruHariIni = rawJadwalGuru[namaHariIniIndo];
+
+          if (jadwalGuruHariIni) {
+            if (!jadwalGuruHariIni.aktif) {
+              statusKehadiran = 'Hadir (Luar Jadwal)';
             } else {
-              statusKehadiran = currentTimeStr > '07:30:00' ? 'Terlambat' : 'Tepat Waktu';
+              const jamMulaiGuru = jadwalGuruHariIni.jamMulai.length === 5 ? `${jadwalGuruHariIni.jamMulai}:00` : jadwalGuruHariIni.jamMulai;
+              statusKehadiran = currentTimeStr > jamMulaiGuru ? 'Terlambat' : 'Tepat Waktu';
             }
           } else {
-            const ambangSiswa = activeJamConfig.ambangTerlambat.length === 5 ? `${activeJamConfig.ambangTerlambat}:00` : activeJamConfig.ambangTerlambat;
-            statusKehadiran = currentTimeStr > ambangSiswa ? 'Terlambat' : 'Tepat Waktu';
+            statusKehadiran = currentTimeStr > '07:30:00' ? 'Terlambat' : 'Tepat Waktu';
           }
+        } else {
+          const ambangSiswa = activeJamConfig.ambangTerlambat.length === 5 ? `${activeJamConfig.ambangTerlambat}:00` : activeJamConfig.ambangTerlambat;
+          statusKehadiran = currentTimeStr > ambangSiswa ? 'Terlambat' : 'Tepat Waktu';
+        }
 
           const newLog = {
             id: Date.now() + Math.floor(Math.random() * 1000),
@@ -3166,7 +3175,7 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
 
 /* ==============================================================
    5. KOMPONEN TAHUN PELAJARAN & MANAJEMEN KENAIKAN KELAS
-============================================================== */
+   ============================================================== */
 const KontenTahunPelajaran = ({ tahunPelajaranAktif, setTahunPelajaranAktif, daftarTahunPelajaran, setDaftarTahunPelajaran, dataSiswa, setDataSiswa, logKehadiran, setLogKehadiran, dataPelanggaran, setDataPelanggaran, dataPerizinan, setDataPerizinan, arsipAbsensi, setArsipAbsensi, isDarkMode }) => {
   const [newTpInput, setNewTpInput] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -3200,9 +3209,17 @@ const KontenTahunPelajaran = ({ tahunPelajaranAktif, setTahunPelajaranAktif, daf
     setSelectedKelasNaik('Semua');
 
     const listSiswa = dataSiswa
-      .filter(s => (s.statusTP?.[tahunPelajaranAktif] || 'Aktif') === 'Aktif' && s.kelasPerTP?.[tahunPelajaranAktif])
+      .filter(s => {
+        const statusTP = s.statusTP?.[tahunPelajaranAktif] || 'Aktif';
+        let ko = s.kelasPerTP;
+        if (typeof ko === 'string') { try { ko = JSON.parse(ko); } catch(e){ ko = {}; } }
+        const kelasTP = ko?.[tahunPelajaranAktif] || s.jabatan_kelas;
+        return statusTP === 'Aktif' && kelasTP;
+      })
       .map(s => {
-        const kelasLama = s.kelasPerTP[tahunPelajaranAktif];
+        let ko = s.kelasPerTP;
+        if (typeof ko === 'string') { try { ko = JSON.parse(ko); } catch(e){ ko = {}; } }
+        const kelasLama = ko?.[tahunPelajaranAktif] || s.jabatan_kelas || '-';
         let kelasPrediksi = kelasLama;
         let statusPrediksi = 'Aktif';
 
@@ -3236,8 +3253,13 @@ const KontenTahunPelajaran = ({ tahunPelajaranAktif, setTahunPelajaranAktif, daf
     const updatedSiswa = dataSiswa.map(siswa => {
       const match = siswaKenaikanList.find(item => item.id === siswa.id);
       if (match) {
-        const existingKelasPerTP = siswa.kelasPerTP || {};
-        const existingStatusTP = siswa.statusTP || {};
+        let existingKelasPerTP = siswa.kelasPerTP;
+        if (typeof existingKelasPerTP === 'string') { try { existingKelasPerTP = JSON.parse(existingKelasPerTP); } catch(e){ existingKelasPerTP = {}; } }
+        existingKelasPerTP = existingKelasPerTP || {};
+
+        let existingStatusTP = siswa.statusTP;
+        if (typeof existingStatusTP === 'string') { try { existingStatusTP = JSON.parse(existingStatusTP); } catch(e){ existingStatusTP = {}; } }
+        existingStatusTP = existingStatusTP || {};
 
         let statusFinal = 'Aktif';
         if (match.statusBaru === 'Tidak Naik') statusFinal = 'Tidak Naik';
@@ -3271,8 +3293,14 @@ const KontenTahunPelajaran = ({ tahunPelajaranAktif, setTahunPelajaranAktif, daf
       setDataPerizinan(dataPerizinan.filter(pr => pr.tahunPelajaran !== tpTarget));
       setArsipAbsensi(arsipAbsensi.filter(a => a.tahunPelajaran !== tpTarget));
       setDataSiswa(dataSiswa.map(siswa => {
-        const newKelasPerTP = { ...(siswa.kelasPerTP || {}) };
-        const newStatusTP = { ...(siswa.statusTP || {}) };
+        let newKelasPerTP = siswa.kelasPerTP;
+        if (typeof newKelasPerTP === 'string') { try { newKelasPerTP = JSON.parse(newKelasPerTP); } catch(e){ newKelasPerTP = {}; } }
+        newKelasPerTP = { ...(newKelasPerTP || {}) };
+
+        let newStatusTP = siswa.statusTP;
+        if (typeof newStatusTP === 'string') { try { newStatusTP = JSON.parse(newStatusTP); } catch(e){ newStatusTP = {}; } }
+        newStatusTP = { ...(newStatusTP || {}) };
+
         delete newKelasPerTP[tpTarget];
         delete newStatusTP[tpTarget];
         return {
@@ -3304,8 +3332,14 @@ const KontenTahunPelajaran = ({ tahunPelajaranAktif, setTahunPelajaranAktif, daf
       setDataPerizinan(dataPerizinan.filter(pr => pr.tahunPelajaran !== tpTarget));
       setArsipAbsensi(arsipAbsensi.filter(a => a.tahunPelajaran !== tpTarget));
       setDataSiswa(dataSiswa.map(siswa => {
-        const newKelasPerTP = { ...(siswa.kelasPerTP || {}) };
-        const newStatusTP = { ...(siswa.statusTP || {}) };
+        let newKelasPerTP = siswa.kelasPerTP;
+        if (typeof newKelasPerTP === 'string') { try { newKelasPerTP = JSON.parse(newKelasPerTP); } catch(e){ newKelasPerTP = {}; } }
+        newKelasPerTP = { ...(newKelasPerTP || {}) };
+
+        let newStatusTP = siswa.statusTP;
+        if (typeof newStatusTP === 'string') { try { newStatusTP = JSON.parse(newStatusTP); } catch(e){ newStatusTP = {}; } }
+        newStatusTP = { ...(newStatusTP || {}) };
+
         delete newKelasPerTP[tpTarget];
         delete newStatusTP[tpTarget];
         return {
@@ -3322,7 +3356,11 @@ const KontenTahunPelajaran = ({ tahunPelajaranAktif, setTahunPelajaranAktif, daf
     }
   };
 
-  const daftarKelasAsal = ['Semua', ...new Set(dataSiswa.map(s => s.kelasPerTP?.[tahunPelajaranAktif]).filter(Boolean))];
+  const daftarKelasAsal = ['Semua', ...new Set(dataSiswa.map(s => {
+    let ko = s.kelasPerTP;
+    if (typeof ko === 'string') { try { ko = JSON.parse(ko); } catch(e){ ko = {}; } }
+    return ko?.[tahunPelajaranAktif] || s.jabatan_kelas;
+  }).filter(Boolean))];
 
   const siswaFilteredWizard = selectedKelasNaik === 'Semua' 
     ? siswaKenaikanList 
@@ -3363,7 +3401,19 @@ const KontenTahunPelajaran = ({ tahunPelajaranAktif, setTahunPelajaranAktif, daf
           </p>
           <div className="space-y-3 pt-2">
             {daftarTahunPelajaran.map((tp) => {
-              const countSiswaAktif = dataSiswa.filter(s => (s.statusTP?.[tp] || 'Aktif') === 'Aktif' && s.kelasPerTP?.[tp]).length;
+              // Perbaikan logika penghitungan siswa aktif yang akurat (mendukung kelasPerTP dan fallback ke jabatan_kelas)
+              const countSiswaAktif = dataSiswa.filter(s => {
+                let statusObj = s.statusTP;
+                if (typeof statusObj === 'string') { try { statusObj = JSON.parse(statusObj); } catch(e){ statusObj = {}; } }
+                const statusTP = statusObj?.[tp] || 'Aktif';
+
+                let kelasObj = s.kelasPerTP;
+                if (typeof kelasObj === 'string') { try { kelasObj = JSON.parse(kelasObj); } catch(e){ kelasObj = {}; } }
+                const kelasTP = kelasObj?.[tp] || (tp === tahunPelajaranAktif ? s.jabatan_kelas : null);
+
+                return statusTP === 'Aktif' && kelasTP;
+              }).length;
+
               const isAktif = tahunPelajaranAktif === tp;
               return (
                 <div 
@@ -3605,7 +3655,6 @@ const KontenTahunPelajaran = ({ tahunPelajaranAktif, setTahunPelajaranAktif, daf
   );
 };
 
-
 /* ==============================================================
    6. KOMPONEN JADWAL PIKET GURU HARIAN
 ============================================================== */
@@ -3768,7 +3817,7 @@ const KontenJadwalPiket = ({ jadwalPiket, setJadwalPiket, daftarGuru, isDarkMode
 
 /* ==============================================================
    7. KOMPONEN POIN DISIPLIN & PELANGGARAN (CLEAN & FIXED)
-============================================================== */
+   ============================================================== */
 const KontenPoinDisiplin = ({ dataSiswa, dataPelanggaran, setDataPelanggaran, isDarkMode, tahunPelajaranAktif }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -3804,8 +3853,17 @@ const KontenPoinDisiplin = ({ dataSiswa, dataPelanggaran, setDataPelanggaran, is
     'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
   ];
 
+  // Daftar Tahun otomatis mengikuti kalender & riwayat data
+  const currentYearStr = new Date().getFullYear().toString();
+  const daftarTahun = ['Semua Tahun', ...new Set((Array.isArray(dataPelanggaran) ? dataPelanggaran : []).map(p => {
+    const match = p.tanggal?.match(/\d{4}/);
+    return match ? match[0] : null;
+  }).filter(Boolean))].sort().reverse();
+  if (!daftarTahun.includes(currentYearStr)) daftarTahun.push(currentYearStr);
+
   const [selectedKelasFilter, setSelectedKelasFilter] = useState('Semua');
   const [selectedBulanFilter, setSelectedBulanFilter] = useState('Semua Bulan');
+  const [selectedTahunFilter, setSelectedTahunFilter] = useState('Semua Tahun');
   
   const [selectedKelasModal, setSelectedKelasModal] = useState(daftarKelasModal[0] || '');
   const [selectedSiswaId, setSelectedSiswaId] = useState('');
@@ -3892,11 +3950,23 @@ const KontenPoinDisiplin = ({ dataSiswa, dataPelanggaran, setDataPelanggaran, is
 
   const filteredPelanggaran = currentPelanggaran.filter(item => {
     const matchKelas = selectedKelasFilter === 'Semua' || (item.kelas && item.kelas.trim().toUpperCase() === selectedKelasFilter.trim().toUpperCase());
+    
+    const mapBulanIndo = {
+      'januari': 'jan', 'februari': 'feb', 'maret': 'mar', 'april': 'apr',
+      'mei': 'mei', 'juni': 'jun', 'juli': 'jul', 'agustus': 'agt',
+      'september': 'sep', 'oktober': 'okt', 'november': 'nov', 'desember': 'des'
+    };
+
+    const tglLower = (item.tanggal || '').toLowerCase();
     let matchBulan = true;
     if (selectedBulanFilter !== 'Semua Bulan') {
-      matchBulan = item.tanggal && item.tanggal.toLowerCase().includes(selectedBulanFilter.toLowerCase().substring(0, 3));
+      const singkatanBulan = mapBulanIndo[selectedBulanFilter.toLowerCase()] || selectedBulanFilter.toLowerCase().substring(0, 3);
+      matchBulan = tglLower.includes(singkatanBulan) || tglLower.includes(selectedBulanFilter.toLowerCase());
     }
-    return matchKelas && matchBulan;
+
+    const matchTahun = selectedTahunFilter === 'Semua Tahun' || tglLower.includes(selectedTahunFilter);
+
+    return matchKelas && matchBulan && matchTahun;
   });
 
   const rekapPoinSiswa = siswaAktifTP
@@ -3914,43 +3984,54 @@ const KontenPoinDisiplin = ({ dataSiswa, dataPelanggaran, setDataPelanggaran, is
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100 text-gray-800'} p-6 rounded-xl shadow-sm border flex flex-col md:flex-row justify-between items-center gap-4`}>
-        <div>
-          <h3 className="text-xl font-bold">Modul Poin Disiplin & Pelanggaran ({tahunPelajaranAktif})</h3>
-          <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Pantau catatan kedisiplinan dan akumulasi poin pelanggaran siswa per kelas secara real-time cloud.</p>
+      <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100 text-gray-800'} p-6 rounded-xl shadow-sm border flex flex-col gap-4`}>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h3 className="text-xl font-bold">Modul Poin Disiplin & Pelanggaran ({tahunPelajaranAktif})</h3>
+            <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Pantau catatan kedisiplinan dan akumulasi poin pelanggaran siswa per kelas secara real-time cloud.</p>
+          </div>
+          <button 
+            onClick={handleOpenModal}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow transition cursor-pointer text-sm whitespace-nowrap self-stretch md:self-auto justify-center"
+          >
+            <Plus size={18} /> Catat Pelanggaran
+          </button>
         </div>
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          
-          {/* FILTER BULAN */}
+
+        {/* BARIS FILTER (BULAN, TAHUN, KELAS) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-700/40">
           <div className="flex items-center gap-2">
-            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-500'} uppercase tracking-wider`}>Bulan:</span>
+            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-500'} uppercase tracking-wider whitespace-nowrap`}>Bulan:</span>
             <select 
               value={selectedBulanFilter} 
               onChange={(e) => setSelectedBulanFilter(e.target.value)} 
-              className={`border px-3 py-2 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-purple-400' : 'bg-purple-50 border-gray-200 text-purple-700'}`}
+              className={`w-full border px-3 py-2 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-purple-400' : 'bg-purple-50 border-gray-200 text-purple-700'}`}
             >
               {daftarBulan.map(b => <option key={b} value={b} className="bg-slate-900 text-white">{b}</option>)}
             </select>
           </div>
 
-          {/* FILTER KELAS */}
           <div className="flex items-center gap-2">
-            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-500'} uppercase tracking-wider`}>Kelas:</span>
+            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-500'} uppercase tracking-wider whitespace-nowrap`}>Tahun:</span>
+            <select 
+              value={selectedTahunFilter} 
+              onChange={(e) => setSelectedTahunFilter(e.target.value)} 
+              className={`w-full border px-3 py-2 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-blue-400' : 'bg-blue-50 border-gray-200 text-blue-700'}`}
+            >
+              {daftarTahun.map(t => <option key={t} value={t} className="bg-slate-900 text-white">{t}</option>)}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-500'} uppercase tracking-wider whitespace-nowrap`}>Kelas:</span>
             <select 
               value={selectedKelasFilter} 
               onChange={(e) => setSelectedKelasFilter(e.target.value)} 
-              className={`border px-3 py-2 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-blue-400' : 'bg-blue-50 border-gray-200 text-blue-700'}`}
+              className={`w-full border px-3 py-2 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-blue-400' : 'bg-blue-50 border-gray-200 text-blue-700'}`}
             >
               {daftarKelas.map(k => <option key={k} value={k} className="bg-slate-900 text-white">{k}</option>)}
             </select>
           </div>
-
-          <button 
-            onClick={handleOpenModal}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow transition cursor-pointer text-sm whitespace-nowrap"
-          >
-            <Plus size={18} /> Catat Pelanggaran
-          </button>
         </div>
       </div>
 
@@ -3984,7 +4065,7 @@ const KontenPoinDisiplin = ({ dataSiswa, dataPelanggaran, setDataPelanggaran, is
 
         <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100 text-gray-800'} lg:col-span-2 rounded-xl shadow-sm border flex flex-col`}>
           <div className={`p-6 border-b ${isDarkMode ? 'border-slate-800' : 'border-gray-100'} flex justify-between items-center`}>
-            <h4 className="font-bold">Riwayat Catatan Pelanggaran ({selectedKelasFilter} - {selectedBulanFilter})</h4>
+            <h4 className="font-bold">Riwayat Catatan Pelanggaran (Kelas: {selectedKelasFilter} | {selectedBulanFilter} {selectedTahunFilter})</h4>
           </div>
           <div className="p-2 overflow-x-auto flex-1">
             <table className="w-full text-left border-collapse">
@@ -4272,14 +4353,52 @@ const KontenTrenDisiplin = ({ dataPelanggaran, dataSiswa, isDarkMode, tahunPelaj
 
 /* ==============================================================
    9. KOMPONEN PERIZINAN & SURAT SAKIT ONLINE (RESPONSIF HP & PC)
-============================================================== */
+   ============================================================== */
 const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPerizinan, infoSekolah, isDarkMode, tahunPelajaranAktif }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const siswaAktifTP = dataSiswa.filter(s => (s.statusTP?.[tahunPelajaranAktif] || 'Aktif') === 'Aktif' && s.kelasPerTP?.[tahunPelajaranAktif]);
-  const daftarKelas = ['Semua', ...new Set(siswaAktifTP.map(s => s.kelasPerTP[tahunPelajaranAktif]))];
-  const [selectedKelasFilter, setSelectedKelasFilter] = useState('Semua');
   
-  const [selectedSiswaId, setSelectedSiswaId] = useState(siswaAktifTP[0]?.id || '');
+  const siswaAktifTP = dataSiswa.filter(s => {
+    const statusTP = s.statusTP?.[tahunPelajaranAktif] || 'Aktif';
+    let ko = s.kelasPerTP;
+    if (typeof ko === 'string') { try { ko = JSON.parse(ko); } catch(e){ ko = {}; } }
+    const kelasTP = ko?.[tahunPelajaranAktif] || s.jabatan_kelas;
+    return statusTP === 'Aktif' && kelasTP;
+  });
+
+  // Daftar kelas untuk filter utama di tabel (menggunakan 'Semua')
+  const daftarKelasFilter = ['Semua', ...new Set(siswaAktifTP.map(s => {
+    let ko = s.kelasPerTP;
+    if (typeof ko === 'string') { try { ko = JSON.parse(ko); } catch(e){ ko = {}; } }
+    return (ko?.[tahunPelajaranAktif] || s.jabatan_kelas || '').trim().toUpperCase();
+  }))].filter(Boolean).sort();
+
+  // Daftar kelas khusus untuk pilihan di dalam Modal Form (TANPA 'Semua')
+  const daftarKelasModal = [...new Set(siswaAktifTP.map(s => {
+    let ko = s.kelasPerTP;
+    if (typeof ko === 'string') { try { ko = JSON.parse(ko); } catch(e){ ko = {}; } }
+    return (ko?.[tahunPelajaranAktif] || s.jabatan_kelas || '').trim().toUpperCase();
+  }))].filter(Boolean).sort();
+
+  const [selectedKelasFilter, setSelectedKelasFilter] = useState('Semua');
+  const [selectedKelasModal, setSelectedKelasModal] = useState(daftarKelasModal[0] || '');
+
+  // State Filter Bulan & Tahun
+  const daftarBulan = [
+    'Semua Bulan', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
+  const [selectedBulanFilter, setSelectedBulanFilter] = useState('Semua Bulan');
+
+  const currentYearStr = new Date().getFullYear().toString();
+  const daftarTahun = ['Semua Tahun', ...new Set(dataPerizinan.map(p => {
+    const match = p.tanggal?.match(/\d{4}/);
+    return match ? match[0] : null;
+  }).filter(Boolean))].sort().reverse();
+  if (!daftarTahun.includes(currentYearStr)) daftarTahun.push(currentYearStr);
+
+  const [selectedTahunFilter, setSelectedTahunFilter] = useState('Semua Tahun');
+  
+  const [selectedSiswaId, setSelectedSiswaId] = useState('');
   const [jenisIzin, setJenisIzin] = useState('');
   const [jamKeluar, setJamKeluar] = useState(new Date().toTimeString().substring(0, 5));
   const [jamKembali, setJamKembali] = useState('');
@@ -4287,9 +4406,12 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
 
   const [activeSuratIzin, setActiveSuratIzin] = useState(null);
 
-  const siswaForModal = selectedKelasFilter === 'Semua' 
-    ? siswaAktifTP 
-    : siswaAktifTP.filter(s => s.kelasPerTP[tahunPelajaranAktif] === selectedKelasFilter);
+  const siswaForModal = siswaAktifTP.filter(s => {
+    let ko = s.kelasPerTP;
+    if (typeof ko === 'string') { try { ko = JSON.parse(ko); } catch(e){ ko = {}; } }
+    const kSiswa = (ko?.[tahunPelajaranAktif] || s.jabatan_kelas || '').trim().toUpperCase();
+    return kSiswa === selectedKelasModal;
+  });
 
   const handleAddPerizinan = async (e) => {
     e.preventDefault();
@@ -4301,10 +4423,14 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
       return;
     }
 
+    let ko = targetSiswa.kelasPerTP;
+    if (typeof ko === 'string') { try { ko = JSON.parse(ko); } catch(e){ ko = {}; } }
+    const kelasSiswaFinal = ko?.[tahunPelajaranAktif] || targetSiswa.jabatan_kelas || '-';
+
     const newRecord = {
       tanggal: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
       nama: targetSiswa.nama,
-      kelas: targetSiswa.kelasPerTP[tahunPelajaranAktif] || '-',
+      kelas: kelasSiswaFinal,
       jenis_izin: jenisIzin,
       jam_keluar: jamKeluar,
       jam_kembali: jamKembali || '-',
@@ -4313,7 +4439,6 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
       tahun_pelajaran: tahunPelajaranAktif
     };
 
-    // 1. Simpan ke Supabase Cloud
     const { data, error } = await supabase
       .from('data_perizinan')
       .insert([newRecord])
@@ -4325,7 +4450,6 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
       return;
     }
 
-    // 2. Update state lokal jika sukses
     if (data && data.length > 0) {
       const formattedRecord = {
         id: data[0].id,
@@ -4350,7 +4474,6 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
   const handleTandaiKembali = async (id) => {
     const nowStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     
-    // 1. Update ke Supabase Cloud
     const { error } = await supabase
       .from('data_perizinan')
       .update({ status: 'Sudah Kembali', jam_kembali: nowStr })
@@ -4362,14 +4485,12 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
       return;
     }
 
-    // 2. Update state lokal
     const updated = dataPerizinan.map(item => item.id === id ? { ...item, status: 'Sudah Kembali', jamKembali: nowStr } : item);
     setDataPerizinan(updated);
   };
 
   const handleDeletePerizinan = async (id) => {
     if (window.confirm('Hapus catatan perizinan ini?')) {
-      // 1. Hapus dari Supabase Cloud
       const { error } = await supabase
         .from('data_perizinan')
         .delete()
@@ -4381,7 +4502,6 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
         return;
       }
 
-      // 2. Update state lokal
       setDataPerizinan(dataPerizinan.filter(p => p.id !== id));
     }
   };
@@ -4392,9 +4512,26 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
 
   const currentPerizinan = dataPerizinan.filter(p => p.tahunPelajaran === tahunPelajaranAktif);
 
-  const filteredPerizinan = selectedKelasFilter === 'Semua'
-    ? currentPerizinan
-    : currentPerizinan.filter(p => p.kelas.toLowerCase() === selectedKelasFilter.toLowerCase());
+  const filteredPerizinan = currentPerizinan.filter(item => {
+    const matchKelas = selectedKelasFilter === 'Semua' || item.kelas.toLowerCase() === selectedKelasFilter.toLowerCase();
+    
+    const mapBulanIndo = {
+      'januari': 'jan', 'februari': 'feb', 'maret': 'mar', 'april': 'apr',
+      'mei': 'mei', 'juni': 'jun', 'juli': 'jul', 'agustus': 'agt',
+      'september': 'sep', 'oktober': 'okt', 'november': 'nov', 'desember': 'des'
+    };
+    
+    const tglLower = (item.tanggal || '').toLowerCase();
+    let matchBulan = true;
+    if (selectedBulanFilter !== 'Semua Bulan') {
+      const singkatanBulan = mapBulanIndo[selectedBulanFilter.toLowerCase()] || selectedBulanFilter.toLowerCase().substring(0, 3);
+      matchBulan = tglLower.includes(singkatanBulan) || tglLower.includes(selectedBulanFilter.toLowerCase());
+    }
+
+    const matchTahun = selectedTahunFilter === 'Semua Tahun' || tglLower.includes(selectedTahunFilter);
+
+    return matchKelas && matchBulan && matchTahun;
+  });
 
   return (
     <div className="flex flex-col h-full space-y-4 overflow-y-auto pb-6">
@@ -4412,41 +4549,74 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
       `}} />
 
       {/* HEADER KONTROL & FILTER */}
-      <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100 text-gray-800'} p-4 md:p-6 rounded-xl shadow-sm border flex flex-col md:flex-row justify-between items-center gap-4 no-print`}>
-        <div>
-          <h3 className="text-lg md:text-xl font-bold flex items-center gap-2">
-            <FileCheck className="text-blue-600 flex-shrink-0" /> Modul Perizinan & Surat Sakit Online ({tahunPelajaranAktif})
-          </h3>
-          <p className={`text-xs md:text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'} mt-1`}>Kelola dan pantau siswa yang izin keluar gerbang di tengah jam pelajaran secara real-time cloud.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-between md:justify-end">
-          <div className="flex items-center gap-2">
-            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-500'} uppercase tracking-wider`}>Filter:</span>
-            <select 
-              value={selectedKelasFilter} 
-              onChange={(e) => setSelectedKelasFilter(e.target.value)} 
-              className={`border px-3 py-2 rounded-xl text-xs md:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-blue-400' : 'bg-blue-50 border-gray-200 text-blue-700'}`}
-            >
-              {daftarKelas.map(k => <option key={k} value={k} className="bg-slate-900 text-white">{k}</option>)}
-            </select>
+      <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100 text-gray-800'} p-4 md:p-6 rounded-xl shadow-sm border flex flex-col gap-4 no-print`}>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h3 className="text-lg md:text-xl font-bold flex items-center gap-2">
+              <FileCheck className="text-blue-600 flex-shrink-0" /> Modul Perizinan & Surat Sakit Online ({tahunPelajaranAktif})
+            </h3>
+            <p className={`text-xs md:text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'} mt-1`}>Kelola dan pantau siswa yang izin keluar gerbang di tengah jam pelajaran secara real-time cloud.</p>
           </div>
           <button 
             onClick={() => {
-              setSelectedSiswaId(siswaForModal[0]?.id || '');
+              const kAwal = daftarKelasModal[0] || '';
+              setSelectedKelasModal(kAwal);
+              const filteredAwal = siswaAktifTP.filter(s => {
+                let ko = s.kelasPerTP;
+                if (typeof ko === 'string') { try { ko = JSON.parse(ko); } catch(e){ ko = {}; } }
+                return (ko?.[tahunPelajaranAktif] || s.jabatan_kelas || '').trim().toUpperCase() === kAwal;
+              });
+              setSelectedSiswaId(filteredAwal[0]?.id || '');
               setJenisIzin('');
               setIsModalOpen(true);
             }}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow transition cursor-pointer text-xs md:text-sm whitespace-nowrap"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow transition cursor-pointer text-xs md:text-sm whitespace-nowrap self-stretch md:self-auto justify-center"
           >
             <Plus size={16} /> Catat Izin Baru
           </button>
+        </div>
+
+        {/* BARIS FILTER (KELAS, BULAN, TAHUN) - TAMPIL JELAS */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-700/40">
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-500'} uppercase tracking-wider whitespace-nowrap`}>Kelas:</span>
+            <select 
+              value={selectedKelasFilter} 
+              onChange={(e) => setSelectedKelasFilter(e.target.value)} 
+              className={`w-full border px-3 py-2 rounded-xl text-xs md:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-blue-400' : 'bg-blue-50 border-gray-200 text-blue-700'}`}
+            >
+              {daftarKelasFilter.map(k => <option key={k} value={k} className="bg-slate-900 text-white">{k}</option>)}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-500'} uppercase tracking-wider whitespace-nowrap`}>Bulan:</span>
+            <select 
+              value={selectedBulanFilter} 
+              onChange={(e) => setSelectedBulanFilter(e.target.value)} 
+              className={`w-full border px-3 py-2 rounded-xl text-xs md:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-blue-400' : 'bg-blue-50 border-gray-200 text-blue-700'}`}
+            >
+              {daftarBulan.map(b => <option key={b} value={b} className="bg-slate-900 text-white">{b}</option>)}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-500'} uppercase tracking-wider whitespace-nowrap`}>Tahun:</span>
+            <select 
+              value={selectedTahunFilter} 
+              onChange={(e) => setSelectedTahunFilter(e.target.value)} 
+              className={`w-full border px-3 py-2 rounded-xl text-xs md:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-blue-400' : 'bg-blue-50 border-gray-200 text-blue-700'}`}
+            >
+              {daftarTahun.map(t => <option key={t} value={t} className="bg-slate-900 text-white">{t}</option>)}
+            </select>
+          </div>
         </div>
       </div>
 
       {/* TABEL / DAFTAR PERIZINAN */}
       <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-gray-100'} rounded-xl shadow-sm border overflow-hidden p-2 no-print`}>
         <div className={`p-4 border-b ${isDarkMode ? 'border-slate-800' : 'border-gray-100'}`}>
-          <h4 className="font-bold text-sm">Daftar Perizinan & Surat Sakit Aktif ({selectedKelasFilter})</h4>
+          <h4 className="font-bold text-sm">Daftar Perizinan & Surat Sakit Aktif (Kelas: {selectedKelasFilter} | {selectedBulanFilter} {selectedTahunFilter})</h4>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[700px]">
@@ -4496,7 +4666,7 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
                 ))
               ) : (
                 <tr>
-                  <td colSpan="8" className="text-center py-12 text-gray-400 text-xs italic">Tidak ada data perizinan siswa untuk tahun pelajaran {tahunPelajaranAktif}.</td>
+                  <td colSpan="8" className="text-center py-12 text-gray-400 text-xs italic">Tidak ada data perizinan siswa untuk filter dan tahun pelajaran {tahunPelajaranAktif} yang dipilih.</td>
                 </tr>
               )}
             </tbody>
@@ -4589,17 +4759,26 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
                 <div>
                   <label className={`block text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-gray-500'} uppercase tracking-wider mb-1`}>Pilih Kelas</label>
                   <select 
-                    value={selectedKelasFilter} 
+                    value={selectedKelasModal} 
                     onChange={(e) => {
-                      setSelectedKelasFilter(e.target.value);
-                      const filtered = e.target.value === 'Semua' ? siswaAktifTP : siswaAktifTP.filter(s => s.kelasPerTP[tahunPelajaranAktif] === e.target.value);
+                      const kBaru = e.target.value;
+                      setSelectedKelasModal(kBaru);
+                      const filtered = siswaAktifTP.filter(s => {
+                        let ko = s.kelasPerTP;
+                        if (typeof ko === 'string') { try { ko = JSON.parse(ko); } catch(e){ ko = {}; } }
+                        return (ko?.[tahunPelajaranAktif] || s.jabatan_kelas || '').trim().toUpperCase() === kBaru;
+                      });
                       setSelectedSiswaId(filtered[0]?.id || '');
                     }}
                     className={`w-full border rounded-lg p-2.5 text-sm ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white'}`}
                   >
-                    {daftarKelas.map(k => (
-                      <option key={k} value={k} className="bg-slate-900 text-white">Kelas: {k}</option>
-                    ))}
+                    {daftarKelasModal.length > 0 ? (
+                      daftarKelasModal.map(k => (
+                        <option key={k} value={k} className="bg-slate-900 text-white">Kelas: {k}</option>
+                      ))
+                    ) : (
+                      <option value="">Tidak ada kelas tersedia</option>
+                    )}
                   </select>
                 </div>
                 <div>
@@ -4611,7 +4790,7 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
                   >
                     {siswaForModal.length > 0 ? (
                       siswaForModal.map(s => (
-                        <option key={s.id} value={s.id} className="bg-slate-900 text-white">{s.nama} ({s.kelasPerTP[tahunPelajaranAktif]})</option>
+                        <option key={s.id} value={s.id} className="bg-slate-900 text-white">{s.nama}</option>
                       ))
                     ) : (
                       <option value="">Tidak ada siswa di kelas ini</option>
@@ -5542,7 +5721,7 @@ const KontenPengaturanWaktu = ({ pengaturanJam, setPengaturanJam, dataGuru, setD
 
 /* ==============================================================
    12. KOMPONEN PENGATURAN UMUM, AKUN ADMIN & AUDIO PIKET
-============================================================== */
+   ============================================================== */
 const KontenPengaturanUmum = ({ infoSekolah, setInfoSekolah, adminCredential, setAdminCredential, pengaturanAudio, setPengaturanAudio, isDarkMode }) => {
   const [namaSekolah, setNamaSekolah] = useState(infoSekolah.nama || '');
   const [alamatSekolah, setAlamatSekolah] = useState(infoSekolah.alamat || '');
@@ -5559,9 +5738,16 @@ const KontenPengaturanUmum = ({ infoSekolah, setInfoSekolah, adminCredential, se
   const [audioTerlambat, setAudioTerlambat] = useState(pengaturanAudio?.terlambat || '');
   const [audioTidakDikenal, setAudioTidakDikenal] = useState(pengaturanAudio?.tidakDikenal || '');
 
+  // Handler Upload Logo & Konversi ke Base64 agar Permanen dan Aman dari Clear Cache
   const handleLogoChange = (e) => {
     const file = e.target.files[0];
-    if (file) setLogoPreview(URL.createObjectURL(file));
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   // Handler untuk upload file audio MP3 dan konversi ke Base64 (Permanen)
@@ -5592,7 +5778,6 @@ const KontenPengaturanUmum = ({ infoSekolah, setInfoSekolah, adminCredential, se
 
     // 1. Simpan ke Database Cloud Supabase secara Real-time
     try {
-      // Kita ambil dulu data pengaturan yang ada di Supabase untuk tahu ID-nya
       const { data: existingData } = await supabase.from('pengaturan').select('id').limit(1);
       
       const targetId = existingData && existingData.length > 0 ? existingData[0].id : 1;
@@ -5600,7 +5785,7 @@ const KontenPengaturanUmum = ({ infoSekolah, setInfoSekolah, adminCredential, se
       const { error } = await supabase
         .from('pengaturan')
         .upsert({ 
-          id: targetId, // Menggunakan ID yang sedang aktif di database (misal ID 2)
+          id: targetId,
           ...dataBaruSekolah 
         });
 
@@ -5617,7 +5802,6 @@ const KontenPengaturanUmum = ({ infoSekolah, setInfoSekolah, adminCredential, se
     setInfoSekolah(dataBaruSekolah);
     setAdminCredential({ username: newUsername, password: newPassword });
     
-    // Simpan pengaturan audio lengkap dengan kartu tidak dikenal
     if (setPengaturanAudio) {
       setPengaturanAudio({
         aktif: audioAktif,
@@ -5628,7 +5812,7 @@ const KontenPengaturanUmum = ({ infoSekolah, setInfoSekolah, adminCredential, se
       });
     }
 
-    alert('Pengaturan umum sekolah berhasil disimpan ke Supabase & lokal!');
+    alert('Pengaturan umum sekolah berhasil disimpan permanen ke Supabase & lokal!');
   };
 
   return (
@@ -5706,7 +5890,6 @@ const KontenPengaturanUmum = ({ infoSekolah, setInfoSekolah, adminCredential, se
                 {audioTerlambat && <span className="text-[10px] text-emerald-400 mt-1 block">&checkmark; File audio berhasil dipilih</span>}
               </div>
 
-              {/* Tambahan Slot Audio Kartu Tidak Dikenal */}
               <div>
                 <label className={`block text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-gray-600'} mb-1`}>Audio Kartu Tidak Dikenal / Belum Terdaftar</label>
                 <input type="file" accept="audio/mp3,audio/*" onChange={(e) => handleAudioUpload(e, 'tidakDikenal')} className={`block w-full text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-500'} file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer`} />
@@ -5746,8 +5929,16 @@ const KontenPengaturanUmum = ({ infoSekolah, setInfoSekolah, adminCredential, se
           <div>
             <label className={`block text-sm font-medium ${isDarkMode ? 'text-slate-300' : 'text-gray-700'} mb-1`}>Logo Sekolah</label>
             <div className="flex items-center gap-4">
-              <div className={`w-16 h-16 border rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-50'} overflow-hidden flex-shrink-0`}>
-                {logoPreview ? <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" /> : <School size={28} className="text-gray-400" />}
+              {/* Wadah bulat otomatis menyesuaikan Light Mode (bg-white) atau Dark Mode (bg-slate-800) */}
+              <div className={`w-16 h-16 rounded-full p-1 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-sm border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
+                {logoPreview ? (
+                  <img src={logoPreview} alt="Logo" className="w-full h-full object-contain rounded-full" />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-blue-500">
+                    <ShieldCheck size={26} />
+                    <span className="text-[8px] font-bold tracking-tighter mt-0.5">SMK</span>
+                  </div>
+                )}
               </div>
               <input type="file" accept="image/*" onChange={handleLogoChange} className={`block w-full text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'} file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer`} />
             </div>
