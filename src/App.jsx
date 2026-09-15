@@ -1057,7 +1057,11 @@ const KontenAbsenSekolah = ({ dataGuru, dataSiswa, logKehadiran, setLogKehadiran
     }
 
     return matchSearch && matchKategori;
-  }).sort((a, b) => b.id - a.id);
+  }).sort((a, b) => {
+  const waktuA = a.waktuPulang || a.waktuDatang || '';
+  const waktuB = b.waktuPulang || b.waktuDatang || '';
+  return waktuB.localeCompare(waktuA);
+});
 
   if (sortOrder !== 'none') {
     processedLogs.sort((a, b) => {
@@ -2238,13 +2242,16 @@ const ModePiketScreen = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKeha
       setIsFullscreen(false);
     }
   };
-
   const namaHariIni = new Date().toLocaleDateString('id-ID', { weekday: 'long' });
   const dataPiketHariIni = jadwalPiket.find(j => j.hari.toLowerCase() === namaHariIni.toLowerCase());
 
 const logHariIni = logKehadiran
   .filter(log => log.tanggal === tanggalHariIniStr && log.tahunPelajaran === tahunPelajaranAktif)
-  .sort((a, b) => b.id - a.id);
+  .sort((a, b) => {
+    const waktuA = a.waktuPulang || a.waktuDatang || '';
+    const waktuB = b.waktuPulang || b.waktuDatang || '';
+    return waktuB.localeCompare(waktuA);
+  });
 
   const logGuruHariIni = logHariIni.filter(l => l.role === 'guru');
   const logSiswaHariIni = logHariIni.filter(l => l.role === 'siswa');
@@ -2323,23 +2330,18 @@ const logHariIni = logKehadiran
           }
 
           if (!existingLog.waktuPulang) {
-            if (currentTimeStr >= jamMulaiPulangConfig) {
-              playBeep(true);
-              existingLog.waktuPulang = currentTimeFormatted;
-              
-              await supabase.from('log_kehadiran').update({ waktuPulang: currentTimeFormatted }).eq('id', existingLog.id);
+            playBeep(true);
+            existingLog.waktuPulang = currentTimeFormatted;
+            
+            await supabase.from('log_kehadiran').update({ waktuPulang: currentTimeFormatted }).eq('id', existingLog.id);
 
-              updatedLogs.splice(existingLogIndex, 1);
-              updatedLogs.unshift(existingLog);
-              
-              setLogKehadiran(updatedLogs);
-              setLastScanned({ ...user, jabatan_kelas: userRole === 'siswa' ? userKelas : user.jabatan_kelas, tipe: 'PULANG', waktu: currentTimeFormatted, status: 'Pulang', rfid: scannedRfid });
-              showToast(`Berhasil Absen Pulang: ${user.nama}`, 'success');
-              playCustomAudio('pulang');
-            } else {
-              playBeep(false);
-              showToast(`⚠️ ${user.nama} sudah absen datang. Belum waktunya jam pulang!`, 'error');
-            }
+            updatedLogs.splice(existingLogIndex, 1);
+            updatedLogs.unshift(existingLog);
+            
+            setLogKehadiran(updatedLogs);
+            setLastScanned({ ...user, jabatan_kelas: userRole === 'siswa' ? userKelas : user.jabatan_kelas, tipe: 'PULANG', waktu: currentTimeFormatted, status: 'Pulang', rfid: scannedRfid });
+            showToast(`Berhasil Absen Pulang: ${user.nama}`, 'success');
+            playCustomAudio('pulang');
           } else {
             playBeep(true);
             updatedLogs.splice(existingLogIndex, 1);
