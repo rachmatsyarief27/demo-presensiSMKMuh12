@@ -3123,6 +3123,35 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
           </div>
         </div>
 
+        {/* KARTU INFORMASI GURU BERHALANGAN (SAKIT / IZIN) KHUSUS LAYAR TV */}
+        {logKehadiran.some(l => l.role === 'guru' && ['Sakit', 'Izin'].includes(l.status) && l.tahunPelajaran === tahunPelajaranAktif && l.tanggal === tanggalHariIniStr) && (
+          <div className="bg-slate-900/90 border border-slate-800 p-4 md:p-5 rounded-3xl shadow-2xl backdrop-blur">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-bold text-xs uppercase tracking-wider text-amber-400 flex items-center gap-2">
+                <span>⚠️ Informasi Guru Berhalangan Hadir (Sakit / Izin Hari Ini)</span>
+              </h4>
+              <span className="text-[10px] px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 font-bold border border-amber-500/20">
+                {logKehadiran.filter(l => l.role === 'guru' && ['Sakit', 'Izin'].includes(l.status) && l.tahunPelajaran === tahunPelajaranAktif && l.tanggal === tanggalHariIniStr).length} Orang
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+              {logKehadiran
+                .filter(l => l.role === 'guru' && ['Sakit', 'Izin'].includes(l.status) && l.tahunPelajaran === tahunPelajaranAktif && l.tanggal === tanggalHariIniStr)
+                .map((guruIzin, idx) => (
+                  <div key={idx} className="bg-slate-800/80 border border-slate-700/60 p-2.5 rounded-2xl flex items-center justify-between gap-2 text-xs">
+                    <span className="font-semibold text-slate-200 truncate">{guruIzin.nama}</span>
+                    <span className={`px-2 py-0.5 rounded-lg font-bold text-[10px] whitespace-nowrap ${
+                      guruIzin.status === 'Sakit' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                    }`}>
+                      {guruIzin.status}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
         {/* KOTAK REKAP KEHADIRAN SISWA PER KELAS */}
         <div className="bg-slate-900/95 border border-slate-800 p-4 md:p-6 rounded-3xl shadow-2xl">
           <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400 mb-3 flex items-center gap-2">
