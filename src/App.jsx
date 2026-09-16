@@ -1199,8 +1199,8 @@ const KontenAbsenSekolah = ({ dataGuru, dataSiswa, logKehadiran, setLogKehadiran
                 <span className="font-bold text-blue-500">{hadirGuru} Orang</span>
               </div>
               <div className="flex justify-between items-center text-xs opacity-80 pt-1 border-t border-gray-500/10">
-                <span>Sudah Pulang: <strong className="text-emerald-500">{logsTpAktif.filter(l => l.role === 'guru' && l.waktuPulang).length}</strong></span>
-                <span>Belum Pulang: <strong className="text-amber-500">{logsTpAktif.filter(l => l.role === 'guru' && !l.waktuPulang).length}</strong></span>
+              <span>Sudah Pulang: <strong className="text-emerald-500">{logsTpAktif.filter(l => l.role === 'guru' && l.status !== 'Izin' && l.status !== 'Sakit' && l.waktuPulang).length}</strong></span>
+              <span>Belum Pulang: <strong className="text-amber-500">{logsTpAktif.filter(l => l.role === 'guru' && l.status !== 'Izin' && l.status !== 'Sakit' && !l.waktuPulang).length}</strong></span>
               </div>
             </div>
 
