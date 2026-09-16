@@ -635,9 +635,12 @@ const [daftarMasterKelas, setDaftarMasterKelas] = useState([]);
           </div>
         </div>
 
-        <div className={`flex-1 overflow-y-auto p-6 ${isDarkMode ? 'bg-slate-950' : 'bg-gray-50'} transition-colors`}>
-          {renderKontenUtama()}
-        </div>
+        <div className={`flex-1 overflow-y-auto p-6 ${isDarkMode ? 'bg-slate-950' : 'bg-gray-50'} transition-colors flex flex-col justify-between`}>
+  <div className="w-full">
+    {renderKontenUtama()}
+  </div>
+  <Footer />
+</div>
       </main>
 
       {isProfileModalOpen && (
@@ -1987,7 +1990,10 @@ const LayarPenuhRFID = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKehad
           Selamat Datang di {infoSekolah?.nama || 'Sekolah'} &bull; Harap selalu menjaga ketertiban, kebersihan, dan mematuhi tata tertib sekolah serta melakukan scan kartu dengan tertib.
         </marquee>
       </div>
-
+{/* === TAMBAHKAN FOOTER DI SINI === */}
+      <div className="flex-shrink-0 pt-2">
+        <Footer />
+      </div>
     </div>
   );
 };
@@ -2930,9 +2936,13 @@ const logHariIni = logKehadiran
           </div>
         </div>
       )}
-
+{/* === TAMBAHKAN FOOTER DI SINI === */}
+      {/* FOOTER */}
+    <div className="mt-12 flex-shrink-0">
+      <Footer />
     </div>
-  );
+  </div>
+);
 };
 
 /* ==============================================================
@@ -3199,6 +3209,10 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
             {infoSekolah.pengumuman || 'Selamat datang di lingkungan sekolah. Harap selalu menjaga kebersihan dan ketertiban.'}
           </p>
         </div>
+      </div>
+      {/* === TAMBAHKAN FOOTER DI SINI === */}
+      <div className="mt-6 flex-shrink-0">
+        <Footer />
       </div>
     </div>
   );
@@ -7816,3 +7830,14 @@ const MenuItem = ({ id, icon: Icon, label, activeMenu, onClick, isDarkMode }) =>
     </button>
   </li>
 ); 
+
+/* ==============================================================
+    16. KOMPONEN SIGNATURE FOOTER KREATIF
+============================================================== */
+const Footer = () => {
+  return (
+    <footer className="w-full text-center py-4 mt-auto border-t border-slate-800/60 text-slate-500 text-xs tracking-wide">
+      Code & System by <span className="italic text-slate-400 font-medium">Rchmt_syrf</span> © 2026 — v1.1.09
+    </footer>
+  );
+};
