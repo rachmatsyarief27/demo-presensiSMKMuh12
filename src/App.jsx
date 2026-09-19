@@ -4736,8 +4736,8 @@ const KontenPerizinanSiswa = ({ dataSiswa, dataGuru, dataPerizinan, setDataPeriz
             <div className="p-4 md:p-6 overflow-y-auto flex-1 bg-gray-50 flex justify-center">
               <div id="printable-surat-izin" className="bg-white text-gray-800 w-full max-w-[650px] p-6 md:p-8 shadow-sm rounded-xl space-y-6 border">
                 <div className="flex items-center justify-between border-b-2 border-gray-800 pb-4">
-                  <div className="w-16 h-16 md:w-20 md:h-20 bg-blue-600 rounded-xl flex items-center justify-center text-white overflow-hidden flex-shrink-0 shadow-sm">
-                    {infoSekolah.logo ? <img src={infoSekolah.logo} alt="Logo" className="w-full h-full object-cover" /> : <School size={36} />}
+                  <div className="w-16 h-16 md:w-20 md:h-20 bg-transparent flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {infoSekolah.logo ? <img src={infoSekolah.logo} alt="Logo" className="w-full h-full object-contain" /> : <School size={36} className="text-blue-600" />}
                   </div>
                   <div className="text-center flex-1 px-2">
                     <h3 className="font-black text-base md:text-xl uppercase tracking-wider">{infoSekolah.nama}</h3>
@@ -6635,8 +6635,12 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
             <div className="p-6 overflow-y-auto flex-1 bg-gray-50 flex justify-center">
               <div id="printable-rapor" className="bg-white text-gray-800 w-[650px] p-8 shadow-sm rounded-xl space-y-5 border">
                 <div className="flex items-center gap-4 border-b-2 border-gray-800 pb-3">
-                  <div className="w-14 h-14 bg-blue-600 rounded-xl flex items-center justify-center text-white overflow-hidden flex-shrink-0">
-                    {targetSiswa.foto ? <img src={targetSiswa.foto} alt="Foto Siswa" className="w-full h-full object-cover" /> : infoSekolah.logo ? <img src={infoSekolah.logo} alt="Logo" className="w-full h-full object-cover" /> : <School size={32} />}
+                 <div className="w-20 h-20 bg-transparent flex items-center justify-center overflow-hidden flex-shrink-0">
+                    <img 
+                     src={infoSekolah?.logo || ''} 
+                     alt="Logo Sekolah" 
+                     className="w-full h-full object-contain" 
+                    />
                   </div>
                   <div className="text-center flex-1">
                     <h3 className="font-black text-lg uppercase tracking-wider">{infoSekolah.nama}</h3>
@@ -6661,8 +6665,8 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
                     </p>
                   </div>
                   <div>
-                    <span className="text-gray-500">Nomor Induk RFID:</span>
-                    <p className="font-mono font-bold">{targetSiswa.rfid}</p>
+                    <span className="text-gray-500">Nomor NISN:</span>
+                     <p className="font-mono font-bold">{targetSiswa.nisn || targetSiswa.nisn_siswa || '-'}</p>
                   </div>
                   <div>
                     <span className="text-gray-500">Status Kedisiplinan:</span>
