@@ -1311,6 +1311,7 @@ const KontenAbsenSekolah = ({ dataGuru, dataSiswa, logKehadiran, setLogKehadiran
                           log.status === 'Terlambat' ? 'bg-red-500/10 text-red-400 border-red-500/30' :
                           log.status === 'Izin' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' :
                           log.status === 'Sakit' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' :
+                          log.status === 'Alpa' ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' :
                           'bg-green-500/10 text-green-400 border-green-500/30'
                         }`}
                       >
@@ -1318,6 +1319,7 @@ const KontenAbsenSekolah = ({ dataGuru, dataSiswa, logKehadiran, setLogKehadiran
                         <option value="Terlambat" className="bg-slate-900 text-white">Terlambat</option>
                         <option value="Izin" className="bg-slate-900 text-white">Izin</option>
                         <option value="Sakit" className="bg-slate-900 text-white">Sakit</option>
+                        <option value="Alpa" className="bg-slate-900 text-white">Alpa</option>
                       </select>
                     </td>
                   </tr>
