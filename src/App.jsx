@@ -6372,11 +6372,11 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
   };
 
   // EXPORT HARI INI
-  const exportToSingleExcel = (dataToExport, fileName) => {
+ const exportToSingleExcel = (dataToExport, fileName) => {
     if (typeof XLSX === 'undefined') { alert('Library XLSX belum dimuat!'); return; }
     
     const now = new Date();
-    const hariIni = now.getDate().toString();
+    const hariIniNum = now.getDate(); // Contoh: 8
     const bulanIni = now.toLocaleDateString('id-ID', { month: 'short' }).toLowerCase();
     const bulanPanjang = now.toLocaleDateString('id-ID', { month: 'long' }).toLowerCase();
     const tahunIni = now.getFullYear().toString();
@@ -6384,9 +6384,16 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
     const dataHariIniSaja = dataToExport.filter(item => {
       if (!item.tanggal) return false;
       const tglLower = item.tanggal.toLowerCase();
-      const matchHari = tglLower.includes(hariIni);
+      
+      // Ambil angka pertama yang muncul di string tanggal secara presisi
+      const angkaMatch = item.tanggal.match(/\d+/);
+      const tanggalItemNum = angkaMatch ? parseInt(angkaMatch[0], 10) : null;
+
+      // Pastikan nomor tanggalnya persis sama (tidak parsial / mengandung angka yang sama)
+      const matchHari = tanggalItemNum === hariIniNum;
       const matchBulan = tglLower.includes(bulanIni) || tglLower.includes(bulanPanjang);
       const matchTahun = tglLower.includes(tahunIni);
+      
       return matchHari && (matchBulan || matchTahun);
     });
 
