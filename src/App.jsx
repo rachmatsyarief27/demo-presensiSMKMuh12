@@ -3052,6 +3052,7 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
     l.role === 'siswa' && 
     l.status !== 'Izin' && 
     l.status !== 'Sakit' && 
+    l.status !== 'Alpa' && 
     l.tahunPelajaran === tahunPelajaranAktif &&
     l.tanggal === tanggalHariIniStr
   );
