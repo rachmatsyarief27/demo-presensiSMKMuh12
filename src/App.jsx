@@ -3017,17 +3017,34 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
 
   const tanggalHariIniStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 
+  // Helper aman untuk parsing data JSON dari database (kelasPerTP & statusTP)
+  const getKelasSiswaTP = (s) => {
+    let ko = s.kelasPerTP;
+    if (typeof ko === 'string') {
+      try { ko = JSON.parse(ko); } catch(e) { ko = {}; }
+    }
+    return ko?.[tahunPelajaranAktif];
+  };
+
+  const getStatusSiswaTP = (s) => {
+    let st = s.statusTP;
+    if (typeof st === 'string') {
+      try { st = JSON.parse(st); } catch(e) { st = {}; }
+    }
+    return st?.[tahunPelajaranAktif] || 'Aktif';
+  };
+
   const totalHadirGuru = logKehadiran.filter(l => l.role === 'guru' && l.status !== 'Izin' && l.status !== 'Sakit' && l.status !== 'Alpa' && l.tahunPelajaran === tahunPelajaranAktif && l.tanggal === tanggalHariIniStr).length;
   const totalHadirSiswa = logKehadiran.filter(l => l.role === 'siswa' && l.status !== 'Izin' && l.status !== 'Sakit' && l.tahunPelajaran === tahunPelajaranAktif && l.tanggal === tanggalHariIniStr).length;
   const totalTerlambat = logKehadiran.filter(l => l.status === 'Terlambat' && l.tahunPelajaran === tahunPelajaranAktif && l.tanggal === tanggalHariIniStr).length;
   
-  const totalSiswaAktifTP = dataSiswa.filter(s => (s.statusTP?.[tahunPelajaranAktif] || 'Aktif') === 'Aktif' && s.kelasPerTP?.[tahunPelajaranAktif]).length;
+  const totalSiswaAktifTP = dataSiswa.filter(s => getStatusSiswaTP(s) === 'Aktif' && getKelasSiswaTP(s)).length;
 
   // Mengambil daftar seluruh kelas unik yang aktif pada Tahun Pelajaran ini
   const daftarKelasAktif = [...new Set(
     dataSiswa
-      .filter(s => (s.statusTP?.[tahunPelajaranAktif] || 'Aktif') === 'Aktif' && s.kelasPerTP?.[tahunPelajaranAktif])
-      .map(s => s.kelasPerTP[tahunPelajaranAktif])
+      .filter(s => getStatusSiswaTP(s) === 'Aktif' && getKelasSiswaTP(s))
+      .map(s => getKelasSiswaTP(s))
   )].sort();
 
   // Log siswa yang hadir hari ini pada TP aktif
@@ -3176,8 +3193,8 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
             {daftarKelasAktif.length > 0 ? (
               daftarKelasAktif.map((namaKelas, idx) => {
                 const totalSiswaDiKelas = dataSiswa.filter(s => 
-                  (s.statusTP?.[tahunPelajaranAktif] || 'Aktif') === 'Aktif' && 
-                  s.kelasPerTP?.[tahunPelajaranAktif] === namaKelas
+                  getStatusSiswaTP(s) === 'Aktif' && 
+                  getKelasSiswaTP(s) === namaKelas
                 ).length;
 
                 const siswaHadirDiKelas = logSiswaHadirHariIni.filter(l => l.jabatan_kelas === namaKelas).length;
