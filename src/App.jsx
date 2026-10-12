@@ -781,8 +781,20 @@ const KontenAbsenSekolah = ({ dataGuru, dataSiswa, logKehadiran, setLogKehadiran
   // FILTER LOG KHUSUS TAHUN PELAJARAN AKTIF DAN TANGGAL HARI INI
   const logsTpAktif = logKehadiran.filter(l => l.tahunPelajaran === tahunPelajaranAktif && l.tanggal === tanggalHariIniStr);
 
-  const hadirGuru = logsTpAktif.filter(log => log.role === 'guru' && log.status !== 'Izin' && log.status !== 'Sakit').length;
-  const hadirSiswa = logsTpAktif.filter(log => log.role === 'siswa' && log.status !== 'Izin' && log.status !== 'Sakit').length;
+  const hadirGuru = logsTpAktif.filter(log => log.role === 'guru' && log.status !== 'Izin' && log.status !== 'Sakit' && log.status !== 'Alpa').length;
+  
+  const hadirSiswa = logsTpAktif.filter(log => {
+    if (log.role !== 'siswa' || ['Izin', 'Sakit', 'Alpa'].includes(log.status)) return false;
+    const matchedSiswa = dataSiswa.find(s => s.nama.toLowerCase() === log.nama.toLowerCase());
+    if (!matchedSiswa) return false;
+    
+    let ko = matchedSiswa.kelasPerTP;
+    if (typeof ko === 'string') { try { ko = JSON.parse(ko); } catch(e){ ko = {}; } }
+    const kelasTP = ko?.[tahunPelajaranAktif];
+    const statusTP = matchedSiswa.statusTP?.[tahunPelajaranAktif] || 'Aktif';
+    
+    return statusTP === 'Aktif' && Boolean(kelasTP);
+  }).length;
 
   const kelasSiswaUnik = [...new Set(logsTpAktif.filter(l => l.role === 'siswa').map(l => l.jabatan_kelas))].sort();
   const adaGuruHadir = logsTpAktif.some(l => l.role === 'guru');
@@ -2268,7 +2280,20 @@ const logHariIni = logKehadiran
   const guruSudahPulang = logGuruHariIni.filter(l => l.waktuPulang !== null).length;
   const guruBelumPulang = guruHadirCount - guruSudahPulang;
 
-  const siswaHadirList = logSiswaHariIni.filter(l => ['Tepat Waktu', 'Terlambat', 'Hadir'].includes(l.status));
+  const siswaHadirList = logSiswaHariIni.filter(l => {
+    if (!['Tepat Waktu', 'Terlambat', 'Hadir', 'Hadir (Luar Jadwal)'].includes(l.status)) return false;
+    if (['Sakit', 'Izin', 'Alpa'].includes(l.status)) return false;
+    
+    const matchedSiswa = dataSiswa.find(s => s.nama.toLowerCase() === l.nama.toLowerCase());
+    if (!matchedSiswa) return false;
+    
+    let ko = matchedSiswa.kelasPerTP;
+    if (typeof ko === 'string') { try { ko = JSON.parse(ko); } catch(e){ ko = {}; } }
+    const kelasTP = ko?.[tahunPelajaranAktif];
+    const statusTP = matchedSiswa.statusTP?.[tahunPelajaranAktif] || 'Aktif';
+    
+    return statusTP === 'Aktif' && Boolean(kelasTP);
+  });
   const siswaSakitCount = logSiswaHariIni.filter(l => l.status === 'Sakit').length;
   const siswaIzinCount = logSiswaHariIni.filter(l => l.status === 'Izin').length;
   const siswaAlpaCount = logSiswaHariIni.filter(l => l.status === 'Alpa').length;
@@ -3015,7 +3040,7 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
     }
   };
 
-  const tanggalHariIniStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+ const tanggalHariIniStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 
   // Helper aman untuk parsing data JSON dari database (kelasPerTP & statusTP)
   const getKelasSiswaTP = (s) => {
@@ -3034,9 +3059,40 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
     return st?.[tahunPelajaranAktif] || 'Aktif';
   };
 
+  // Helper untuk mengecek apakah siswa terdaftar aktif di TP ini
+  const isSiswaAktifValid = (namaSiswa) => {
+    const matchedSiswa = dataSiswa.find(s => s.nama.toLowerCase() === namaSiswa.toLowerCase());
+    if (!matchedSiswa) return false;
+    const kelasTP = getKelasSiswaTP(matchedSiswa);
+    const statusTP = getStatusSiswaTP(matchedSiswa);
+    return statusTP === 'Aktif' && Boolean(kelasTP);
+  };
+
   const totalHadirGuru = logKehadiran.filter(l => l.role === 'guru' && l.status !== 'Izin' && l.status !== 'Sakit' && l.status !== 'Alpa' && l.tahunPelajaran === tahunPelajaranAktif && l.tanggal === tanggalHariIniStr).length;
-  const totalHadirSiswa = logKehadiran.filter(l => l.role === 'siswa' && l.status !== 'Izin' && l.status !== 'Sakit' && l.tahunPelajaran === tahunPelajaranAktif && l.tanggal === tanggalHariIniStr).length;
-  const totalTerlambat = logKehadiran.filter(l => l.status === 'Terlambat' && l.tahunPelajaran === tahunPelajaranAktif && l.tanggal === tanggalHariIniStr).length;
+  
+  const totalHadirSiswa = logKehadiran.filter(l => 
+    l.role === 'siswa' && 
+    l.status !== 'Izin' && 
+    l.status !== 'Sakit' && 
+    l.status !== 'Alpa' && 
+    l.tahunPelajaran === tahunPelajaranAktif && 
+    l.tanggal === tanggalHariIniStr &&
+    isSiswaAktifValid(l.nama)
+  ).length;
+
+const totalTerlambat = logKehadiran.filter(l => {
+  if (l.status !== 'Terlambat' || l.tahunPelajaran !== tahunPelajaranAktif || l.tanggal !== tanggalHariIniStr) return false;
+  
+  // Jika guru yang terlambat, loloskan
+  if (l.role === 'guru') return true;
+  
+  // Jika siswa yang terlambat, pastikan dia adalah siswa aktif yang valid
+  if (l.role === 'siswa') {
+    return isSiswaAktifValid(l.nama);
+  }
+  
+  return false;
+}).length;
   
   const totalSiswaAktifTP = dataSiswa.filter(s => getStatusSiswaTP(s) === 'Aktif' && getKelasSiswaTP(s)).length;
 
@@ -3047,14 +3103,15 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
       .map(s => getKelasSiswaTP(s))
   )].sort();
 
-  // Log siswa yang hadir hari ini pada TP aktif
+  // Log siswa yang hadir hari ini pada TP aktif dan tervalidasi aktif
   const logSiswaHadirHariIni = logKehadiran.filter(l => 
     l.role === 'siswa' && 
     l.status !== 'Izin' && 
     l.status !== 'Sakit' && 
     l.status !== 'Alpa' && 
     l.tahunPelajaran === tahunPelajaranAktif &&
-    l.tanggal === tanggalHariIniStr
+    l.tanggal === tanggalHariIniStr &&
+    isSiswaAktifValid(l.nama)
   );
 
   return (
