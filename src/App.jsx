@@ -1766,12 +1766,62 @@ const LayarPenuhRFID = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKehad
   };
 
   const tanggalHariIniStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-  const logHariIni = logKehadiran.filter(l => l.tahunPelajaran === tahunPelajaranAktif && l.tanggal === tanggalHariIniStr);
+
+  // Helper aman untuk parsing data JSON dari database (kelasPerTP & statusTP)
+  const getKelasSiswaTP = (s) => {
+    let ko = s.kelasPerTP;
+    if (typeof ko === 'string') {
+      try { ko = JSON.parse(ko); } catch(e) { ko = {}; }
+    }
+    return ko?.[tahunPelajaranAktif];
+  };
+
+  const getStatusSiswaTP = (s) => {
+    let st = s.statusTP;
+    if (typeof st === 'string') {
+      try { st = JSON.parse(st); } catch(e) { st = {}; }
+    }
+    return st?.[tahunPelajaranAktif] || 'Aktif';
+  };
+
+  const isSiswaAktifValid = (namaSiswa) => {
+    const matchedSiswa = dataSiswa.find(s => s.nama.toLowerCase() === namaSiswa.toLowerCase());
+    if (!matchedSiswa) return false;
+    const kelasTP = getKelasSiswaTP(matchedSiswa);
+    const statusTP = getStatusSiswaTP(matchedSiswa);
+    return statusTP === 'Aktif' && Boolean(kelasTP);
+  };
+
+const logHariIni = logKehadiran.filter(l => {
+  if (l.tahunPelajaran !== tahunPelajaranAktif || l.tanggal !== tanggalHariIniStr) return false;
+  if (l.role === 'guru') return true;
+  if (l.role === 'siswa') {
+    return isSiswaAktifValid(l.nama);
+  }
+  return false;
+}).sort((a, b) => {
+  const hasDatangA = a.waktuDatang && a.waktuDatang !== '-';
+  const hasDatangB = b.waktuDatang && b.waktuDatang !== '-';
+
+  // Jika A punya jam datang dan B tidak (Alpa/Izin), A harus di atas (-1)
+  if (hasDatangA && !hasDatangB) return -1;
+  // Jika B punya jam datang dan A tidak, B harus di atas (1)
+  if (!hasDatangA && hasDatangB) return 1;
+
+  // Jika sama-sama punya atau sama-sama tidak punya, urutkan berdasarkan ID terbaru (b.id - a.id)
+  return b.id - a.id;
+});
+
+  const guruHadir = logHariIni.filter(l => l.role === 'guru' && l.status !== 'Izin' && l.status !== 'Sakit' && l.status !== 'Alpa');
   
-  const guruHadir = logHariIni.filter(l => l.role === 'guru');
-  const siswaHadir = logHariIni.filter(l => l.role === 'siswa');
+  const siswaHadir = logHariIni.filter(l => l.role === 'siswa' && l.status !== 'Izin' && l.status !== 'Sakit' && l.status !== 'Alpa' && isSiswaAktifValid(l.nama));
   const siswaPulang = siswaHadir.filter(l => l.waktuPulang);
   const siswaBelumPulang = siswaHadir.length - siswaPulang.length;
+
+  // Hitung status khusus siswa hari ini secara akurat
+  const totalSakitSiswa = logHariIni.filter(l => l.role === 'siswa' && l.status === 'Sakit' && isSiswaAktifValid(l.nama)).length;
+  const totalIzinSiswa = logHariIni.filter(l => l.role === 'siswa' && l.status === 'Izin' && isSiswaAktifValid(l.nama)).length;
+  const totalAlpaSiswa = logHariIni.filter(l => l.role === 'siswa' && l.status === 'Alpa' && isSiswaAktifValid(l.nama)).length;
 
   return (
     <div className={`h-screen w-screen ${isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-gray-100 text-gray-900'} flex flex-col justify-between p-4 overflow-hidden transition-colors`}>
@@ -1885,16 +1935,16 @@ const LayarPenuhRFID = ({ onBack, dataGuru, dataSiswa, logKehadiran, setLogKehad
                 <span>Belum Pulang: <strong className="opacity-100 font-bold">{siswaBelumPulang}</strong></span>
               </div>
               <div className="grid grid-cols-3 gap-1.5 pt-1">
-                <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} border py-1.5 rounded-xl text-center text-xs font-bold`}>
-                  <span className="opacity-70">Sakit: </span><span className="text-amber-500">0</span>
-                </div>
-                <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} border py-1.5 rounded-xl text-center text-xs font-bold`}>
-                  <span className="opacity-70">Izin: </span><span className="text-blue-500">0</span>
-                </div>
-                <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} border py-1.5 rounded-xl text-center text-xs font-bold`}>
-                  <span className="opacity-70">Alpa: </span><span className="text-rose-500">0</span>
-                </div>
+              <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} border py-1.5 rounded-xl text-center text-xs font-bold`}>
+                <span className="opacity-70">Sakit: </span><span className="text-amber-500">{totalSakitSiswa}</span>
               </div>
+              <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} border py-1.5 rounded-xl text-center text-xs font-bold`}>
+                <span className="opacity-70">Izin: </span><span className="text-blue-500">{totalIzinSiswa}</span>
+              </div>
+              <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} border py-1.5 rounded-xl text-center text-xs font-bold`}>
+                <span className="opacity-70">Alpa: </span><span className="text-rose-500">{totalAlpaSiswa}</span>
+              </div>
+            </div>
             </div>
           </div>
         </div>
