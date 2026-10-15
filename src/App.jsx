@@ -2336,7 +2336,7 @@ const logHariIni = logKehadiran
 
       if (user) {
         const now = new Date();
-        const currentTimeStr = now.toTimeString().split(' ')[0];
+        const currentTimeStr = now.toTimeString().split(' ')[0]; // Format "HH:mm:ss"
         const currentTimeFormatted = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         
         const existingLogIndex = logKehadiran.findIndex(log => log.nama === user.nama && log.tanggal === tanggalHariIniStr && log.tahunPelajaran === tahunPelajaranAktif);
@@ -2344,9 +2344,21 @@ const logHariIni = logKehadiran
         const listHariIndo = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
         const namaHariIniIndo = listHariIndo[now.getDay()];
 
-        let jamMulaiPulangConfig = activeJamConfig?.jamPulang || '12:00';
+        // Ambil konfigurasi jam pulang aktif yang 100% sinkron dengan Menu Pengaturan Jam
+        const modeAktifSekarang = pengaturanJam?.modeAktif || 'Pagi';
+        let jamMulaiPulangConfig = '13:00';
+
+        if (modeAktifSekarang === 'Siang') {
+          jamMulaiPulangConfig = pengaturanJam?.siang?.jamPulang || '18:00';
+        } else if (modeAktifSekarang === 'Full Day' || modeAktifSekarang === 'FullDay') {
+          jamMulaiPulangConfig = pengaturanJam?.fullDay?.jamPulang || '15:30';
+        } else {
+          jamMulaiPulangConfig = pengaturanJam?.pagi?.jamPulang || '13:00';
+        }
+
+        // Jika yang scan adalah guru, timpa dengan jadwal mengajar harian guru ybs
         if (userRole === 'guru' && user.jadwalMengajar?.[namaHariIniIndo]?.aktif) {
-          jamMulaiPulangConfig = user.jadwalMengajar[namaHariIniIndo].jamSelesai || '15:00';
+          jamMulaiPulangConfig = user.jadwalMengajar[namaHariIniIndo].jamSelesai || '14:00';
         }
 
         if (existingLogIndex >= 0) {
@@ -2363,6 +2375,21 @@ const logHariIni = logKehadiran
           }
 
           if (!existingLog.waktuPulang) {
+            // ==========================================
+            // PENGAMAN JAM PULANG (KHUSUS SISWA / GURU)
+            // ==========================================
+            // Format jamPulangConfig di database bisa "13:00" atau "13:00:00"
+            const batasPulangStr = jamMulaiPulangConfig.length === 5 ? `${jamMulaiPulangConfig}:00` : jamMulaiPulangConfig;
+
+            if (userRole === 'siswa' && currentTimeStr < batasPulangStr) {
+              playBeep(true);
+              showToast(`Gagal! Belum waktunya pulang. Jam pulang diatur pukul ${jamMulaiPulangConfig}.`, 'error');
+              playCustomAudio('gagal');
+              setRfidInput('');
+              return; // STOP! Siswa dikunci, tidak bisa absen pulang sebelum waktunya.
+            }
+            // ==========================================
+
             playBeep(true);
             existingLog.waktuPulang = currentTimeFormatted;
             
@@ -2389,23 +2416,23 @@ const logHariIni = logKehadiran
           let statusKehadiran = 'Tepat Waktu';
 
           if (userRole === 'guru') {
-          const rawJadwalGuru = user.jadwal_mengajar || user.jadwalMengajar || {};
+            const rawJadwalGuru = user.jadwal_mengajar || user.jadwalMengajar || {};
             const jadwalGuruHariIni = rawJadwalGuru[namaHariIniIndo];
 
-          if (jadwalGuruHariIni) {
-            if (!jadwalGuruHariIni.aktif) {
-              statusKehadiran = 'Hadir (Luar Jadwal)';
+            if (jadwalGuruHariIni) {
+              if (!jadwalGuruHariIni.aktif) {
+                statusKehadiran = 'Hadir (Luar Jadwal)';
+              } else {
+                const jamMulaiGuru = jadwalGuruHariIni.jamMulai.length === 5 ? `${jadwalGuruHariIni.jamMulai}:00` : jadwalGuruHariIni.jamMulai;
+                statusKehadiran = currentTimeStr > jamMulaiGuru ? 'Terlambat' : 'Tepat Waktu';
+              }
             } else {
-              const jamMulaiGuru = jadwalGuruHariIni.jamMulai.length === 5 ? `${jadwalGuruHariIni.jamMulai}:00` : jadwalGuruHariIni.jamMulai;
-              statusKehadiran = currentTimeStr > jamMulaiGuru ? 'Terlambat' : 'Tepat Waktu';
+              statusKehadiran = currentTimeStr > '07:30:00' ? 'Terlambat' : 'Tepat Waktu';
             }
           } else {
-            statusKehadiran = currentTimeStr > '07:30:00' ? 'Terlambat' : 'Tepat Waktu';
+            const ambangSiswa = activeJamConfig.ambangTerlambat.length === 5 ? `${activeJamConfig.ambangTerlambat}:00` : activeJamConfig.ambangTerlambat;
+            statusKehadiran = currentTimeStr > ambangSiswa ? 'Terlambat' : 'Tepat Waktu';
           }
-        } else {
-          const ambangSiswa = activeJamConfig.ambangTerlambat.length === 5 ? `${activeJamConfig.ambangTerlambat}:00` : activeJamConfig.ambangTerlambat;
-          statusKehadiran = currentTimeStr > ambangSiswa ? 'Terlambat' : 'Tepat Waktu';
-        }
 
           const newLog = {
             id: Date.now() + Math.floor(Math.random() * 1000),
