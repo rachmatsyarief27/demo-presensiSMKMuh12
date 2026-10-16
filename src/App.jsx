@@ -160,7 +160,10 @@ const [daftarMasterKelas, setDaftarMasterKelas] = useState([]);
       const { data: siswaData } = await supabase.from('siswa').select('*');
       if (siswaData && siswaData.length > 0) setDataSiswa(siswaData);
 
-      const { data: logData } = await supabase.from('log_kehadiran').select('*');
+      const { data: logData } = await supabase
+        .from('log_kehadiran')
+        .select('*')
+        .order('id', { ascending: false });
       if (logData && logData.length > 0) setLogKehadiran(logData);
 
       // --- PENGATURAN SEKOLAH ---
