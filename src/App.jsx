@@ -3067,8 +3067,13 @@ const ModeInfoSekolahTV = ({ onBack, infoSekolah, tahunPelajaranAktif }) => {
   // --- AMBIL DATA MANDIRI DARI SUPABASE UNTUK LAYAR TV ---
   useEffect(() => {
     const ambilDataTV = async () => {
-      const { data: logData } = await supabase.from('log_kehadiran').select('*');
+      // --- UBAH BAGIAN INI ---
+      const { data: logData } = await supabase
+        .from('log_kehadiran')
+        .select('*')
+        .order('id', { ascending: false });
       if (logData) setLogKehadiran(logData);
+      // -----------------------
 
       const { data: guruData } = await supabase.from('guru').select('*');
       if (guruData) setDataGuru(guruData);
