@@ -1,12 +1,253 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Menu, Search, BarChart2, Users, Clock, Settings, 
-  BookOpen, CreditCard, School, ArrowLeft, Plus, X, CheckCircle, Pencil, Trash2, Download, ShieldCheck, Printer, Tv, Eye, AlertTriangle, Archive, FileText, Lock, LogOut, User, Calendar, TrendingUp, PieChart, FileCheck, QrCode, Sun, Moon, Camera, Layers, ArrowUpRight, UserCheck, UserX, RefreshCw, Upload, Volume2 
+  BookOpen, CreditCard, School, ArrowLeft, Plus, X, CheckCircle, Pencil, Trash2, Download, ShieldCheck, Printer, Tv, Eye, AlertTriangle, Archive, FileText, Lock, LogOut, User, Calendar, TrendingUp, PieChart, FileCheck, QrCode, Sun, Moon, Camera, Layers, ArrowUpRight, UserCheck, UserX, RefreshCw, Upload, Volume2,
+  LayoutDashboard 
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 // --- TAMBAHAN IMPORT SUPABASE ---
 import { supabase } from './supabaseClient';
+
+// ==========================================
+// 0. KOMPONEN DASHBOARD UTAMA & STATISTIK
+// ==========================================
+const KontenDashboard = ({ dataSiswa, dataGuru, logKehadiran, infoSekolah, isDarkMode, tahunPelajaranAktif }) => {
+  const siswaAktifTP = dataSiswa.filter(s => {
+    let statusObj = s.statusTP;
+    if (typeof statusObj === 'string') {
+      try { statusObj = JSON.parse(statusObj); } catch (e) { statusObj = {}; }
+    }
+    const status = statusObj?.[tahunPelajaranAktif] || s.status_tp || s.status || 'Aktif';
+    return status.toLowerCase() === 'aktif';
+  });
+
+  const rekapRombelMap = {};
+  let totalLakiGlobal = 0;
+  let totalPerempuanGlobal = 0;
+
+  siswaAktifTP.forEach(s => {
+    let kelasObj = s.kelasPerTP;
+    if (typeof kelasObj === 'string') {
+      try { kelasObj = JSON.parse(kelasObj); } catch (e) { kelasObj = {}; }
+    }
+    const kelasSiswa = (kelasObj?.[tahunPelajaranAktif] || s.jabatan_kelas || s.kelas || 'Belum Diatur').trim().toUpperCase();
+    
+    if (!rekapRombelMap[kelasSiswa]) {
+      rekapRombelMap[kelasSiswa] = { total: 0, laki: 0, perempuan: 0 };
+    }
+    rekapRombelMap[kelasSiswa].total += 1;
+    
+    const jk = (s.jk || s.jenis_kelamin || '').toLowerCase();
+    if (jk.startsWith('l')) {
+      rekapRombelMap[kelasSiswa].laki += 1;
+      totalLakiGlobal += 1;
+    }
+    else if (jk.startsWith('p')) {
+      rekapRombelMap[kelasSiswa].perempuan += 1;
+      totalPerempuanGlobal += 1;
+    }
+  });
+
+  const daftarRombelArray = Object.keys(rekapRombelMap).sort();
+  // State untuk Filter dan Paginasi Rombel
+  const [filterRombel, setFilterRombel] = React.useState('');
+  const [halamanAktif, setHalamanAktif] = React.useState(1);
+  const limitPerPage = 5;
+
+  // Filter daftar rombel berdasarkan pencarian
+  const rombelTersaring = daftarRombelArray.filter(kelas => 
+    kelas.toLowerCase().includes(filterRombel.toLowerCase())
+  );
+
+  // Hitung total halaman
+  const totalHalaman = Math.ceil(rombelTersaring.length / limitPerPage) || 1;
+
+  // Ambil data untuk halaman aktif saja (maksimal 5 rombel)
+  const indexAkhir = halamanAktif * limitPerPage;
+  const indexAwal = indexAkhir - limitPerPage;
+  const rombelPageData = rombelTersaring.slice(indexAwal, indexAkhir);
+  const todayStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).toLowerCase();
+  const hadirHariIni = logKehadiran.filter(l => l.tanggal && l.tanggal.toLowerCase().includes(todayStr)).length;
+
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto pb-10">
+      <div className={`p-6 rounded-2xl shadow-sm border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white border-transparent'} flex flex-col md:flex-row justify-between items-center gap-4`}>
+        <div className="space-y-1">
+          <span className="text-xs font-semibold px-2.5 py-1 bg-white/20 rounded-full uppercase tracking-wider">
+            Tahun Pelajaran {tahunPelajaranAktif}
+          </span>
+          <h2 className="text-2xl font-black mt-2">Dashboard Utama & Statistik Sekolah</h2>
+          <p className={`text-sm ${isDarkMode ? 'text-slate-300' : 'text-blue-100'}`}>
+            {infoSekolah?.nama || 'Sistem Manajemen Kehadiran Sekolah'} &bull; Pantau data kehadiran, rombel, dan statistik warga sekolah secara real-time.
+          </p>
+        </div>
+        <div className="flex items-center gap-3 bg-black/10 p-3 rounded-xl border border-white/10 backdrop-blur-md">
+          <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+            <img src={infoSekolah?.logo || ''} alt="Logo" className="w-full h-full object-contain" />
+          </div>
+          <div>
+            <p className="text-xs text-white/70">Total Warga Terdaftar</p>
+            <p className="text-lg font-black">{siswaAktifTP.length + (dataGuru?.length || 0)} Jiwa</p>
+          </div>
+        </div>
+      </div>
+
+      {/* 5 KARTU STATISTIK UTAMA (METRIC CARDS) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        
+        {/* Card 1: Total Siswa */}
+        <div className={`p-5 rounded-2xl border shadow-sm ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-gray-100 text-gray-800'} flex items-center justify-between`}>
+          <div className="space-y-1">
+            <p className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Total Siswa Aktif</p>
+            <h3 className="text-3xl font-black text-blue-600">{siswaAktifTP.length}</h3>
+            <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Terverifikasi di TP {tahunPelajaranAktif}</p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+            <Users size={24} />
+          </div>
+        </div>
+
+        {/* Card 2: Guru & Staf */}
+        <div className={`p-5 rounded-2xl border shadow-sm ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-gray-100 text-gray-800'} flex items-center justify-between`}>
+          <div className="space-y-1">
+            <p className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Guru & Staf</p>
+            <h3 className="text-3xl font-black text-emerald-600">{dataGuru?.length || 0}</h3>
+            <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Pendidik & Tenaga Kependidikan</p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+            <Users size={24} />
+          </div>
+        </div>
+
+        {/* Card 3: Total Rombel */}
+        <div className={`p-5 rounded-2xl border shadow-sm ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-gray-100 text-gray-800'} flex items-center justify-between`}>
+          <div className="space-y-1">
+            <p className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Total Rombel (Kelas)</p>
+            <h3 className="text-3xl font-black text-purple-600">{daftarRombelArray.length}</h3>
+            <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Rombongan belajar aktif</p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-500 flex items-center justify-center">
+            <School size={24} />
+          </div>
+        </div>
+
+        {/* Card 4: Siswa Laki-Laki */}
+        <div className={`p-5 rounded-2xl border shadow-sm ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-gray-100 text-gray-800'} flex items-center justify-between`}>
+          <div className="space-y-1">
+            <p className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Siswa Laki-Laki</p>
+            <h3 className="text-3xl font-black text-sky-500">{totalLakiGlobal || 0}</h3>
+            <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Total Putra</p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-500 flex items-center justify-center">
+            <Users size={24} />
+          </div>
+        </div>
+
+        {/* Card 5: Siswa Perempuan */}
+        <div className={`p-5 rounded-2xl border shadow-sm ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-gray-100 text-gray-800'} flex items-center justify-between`}>
+          <div className="space-y-1">
+            <p className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Siswa Perempuan</p>
+            <h3 className="text-3xl font-black text-pink-500">{totalPerempuanGlobal || 0}</h3>
+            <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Total Putri</p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-pink-500/10 text-pink-500 flex items-center justify-center">
+            <Users size={24} />
+          </div>
+        </div>
+      </div>
+
+      {/* KOTAK RINCIAN ROMBEL DENGAN FILTER & PAGINATION */}
+      <div className={`p-6 rounded-2xl border shadow-sm ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-gray-100 text-gray-800'} space-y-4`}>
+        
+        {/* Header Tabel & Filter Rombel */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div>
+            <h4 className="font-bold text-base">Rincian Jumlah Siswa per Rombongan Belajar (Rombel)</h4>
+            <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Akumulasi otomatis jumlah siswa aktif berdasarkan kelas di tahun pelajaran {tahunPelajaranAktif}</p>
+          </div>
+          
+          {/* Kotak Filter / Pencarian Rombel */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <input 
+              type="text"
+              placeholder="Cari Rombel/Kelas..."
+              value={filterRombel}
+              onChange={(e) => { setFilterRombel(e.target.value); setHalamanAktif(1); }}
+              className={`px-3 py-1.5 text-xs rounded-xl border outline-none w-full sm:w-48 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-400 focus:border-blue-500' : 'bg-gray-50 border-gray-200 text-gray-800 focus:border-blue-600'}`}
+            />
+            <span className="text-xs font-bold px-3 py-1.5 bg-blue-500/10 text-blue-500 rounded-xl border border-blue-500/20 whitespace-nowrap">
+              Total: {daftarRombelArray.length} Kelas
+            </span>
+          </div>
+        </div>
+
+        {/* Tabel Data */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className={`text-xs uppercase border-b ${isDarkMode ? 'bg-slate-800/80 text-slate-400 border-slate-700' : 'bg-gray-50 text-gray-500 border-gray-200'}`}>
+                <th className="p-3.5 rounded-l-xl">No</th>
+                <th className="p-3.5">Nama Rombel / Kelas</th>
+                <th className="p-3.5 text-center">Jumlah Laki-laki</th>
+                <th className="p-3.5 text-center">Jumlah Perempuan</th>
+                <th className="p-3.5 text-right rounded-r-xl">Total Siswa</th>
+              </tr>
+            </thead>
+            <tbody className={`divide-y text-sm font-medium ${isDarkMode ? 'divide-slate-800' : 'divide-gray-100'}`}>
+              {rombelPageData.length > 0 ? (
+                rombelPageData.map((kelas, idx) => {
+                  const detail = rekapRombelMap[kelas];
+                  const nomorUrut = indexAwal + idx + 1;
+                  return (
+                    <tr key={kelas} className={`${isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-gray-50/80'} transition`}>
+                      <td className="p-3.5 text-gray-400">{nomorUrut}</td>
+                      <td className="p-3.5 font-bold text-blue-500">{kelas}</td>
+                      <td className="p-3.5 text-center font-semibold">{detail.laki > 0 ? detail.laki : '-'}</td>
+                      <td className="p-3.5 text-center font-semibold">{detail.perempuan > 0 ? detail.perempuan : '-'}</td>
+                      <td className="p-3.5 text-right font-black text-emerald-600">{detail.total} Siswa</td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="5" className="text-center py-8 text-gray-400 italic">Tidak ada rombel yang cocok dengan kata kunci pencarian.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Tombol Navigasi Pagination */}
+        {totalHalaman > 1 && (
+          <div className="flex justify-between items-center pt-3 border-t border-gray-500/10 text-xs">
+            <p className={isDarkMode ? 'text-slate-400' : 'text-gray-500'}>
+              Menampilkan halaman <span className="font-bold text-blue-500">{halamanAktif}</span> dari <span className="font-bold">{totalHalaman}</span>
+            </p>
+            <div className="flex items-center gap-1.5">
+              <button 
+                onClick={() => setHalamanAktif(prev => Math.max(prev - 1, 1))}
+                disabled={halamanAktif === 1}
+                className={`px-3 py-1.5 rounded-lg border font-semibold transition ${halamanAktif === 1 ? 'opacity-40 cursor-not-allowed' : isDarkMode ? 'bg-slate-800 border-slate-700 hover:bg-slate-700 text-white' : 'bg-white border-gray-200 hover:bg-gray-100 text-gray-700'}`}
+              >
+                Sebelumnya
+              </button>
+              
+              <button 
+                onClick={() => setHalamanAktif(prev => Math.min(prev + 1, totalHalaman))}
+                disabled={halamanAktif === totalHalaman}
+                className={`px-3 py-1.5 rounded-lg border font-semibold transition ${halamanAktif === totalHalaman ? 'opacity-40 cursor-not-allowed' : isDarkMode ? 'bg-slate-800 border-slate-700 hover:bg-slate-700 text-white' : 'bg-white border-gray-200 hover:bg-gray-100 text-gray-700'}`}
+              >
+                Selanjutnya
+              </button>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+};
 
 export default function DashboardKehadiran() {
   const [adminCredential, setAdminCredential] = useState(() => {
@@ -23,7 +264,7 @@ export default function DashboardKehadiran() {
   const [loginError, setLoginError] = useState('');
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [activeMenu, setActiveMenu] = useState('absen-sekolah'); 
+  const [activeMenu, setActiveMenu] = useState('dashboard'); 
 
   // State Pengaturan Audio Kustom dengan localStorage
   const [pengaturanAudio, setPengaturanAudio] = useState(() => {
@@ -360,6 +601,17 @@ const [daftarMasterKelas, setDaftarMasterKelas] = useState([]);
 
   const renderKontenUtama = () => {
     switch (activeMenu) {
+      case 'dashboard':
+        return (
+          <KontenDashboard 
+            dataSiswa={dataSiswa} 
+            dataGuru={dataGuru} 
+            logKehadiran={logKehadiran} 
+            infoSekolah={infoSekolah} 
+            isDarkMode={isDarkMode} 
+            tahunPelajaranAktif={tahunPelajaranAktif} 
+          />
+        );
       case 'absen-sekolah':
         return (
           <KontenAbsenSekolah 
@@ -534,7 +786,7 @@ const [daftarMasterKelas, setDaftarMasterKelas] = useState([]);
           <div className="mb-6">
             <p className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Administrator</p>
             <ul className="space-y-1">
-              <MenuItem id="rekapitulasi" icon={BarChart2} label="Rekapitulasi & Rapor" activeMenu={activeMenu} onClick={(id) => { setActiveMenu(id); setIsSidebarOpen(false); }} isDarkMode={isDarkMode} />
+              <MenuItem id="dashboard" icon={LayoutDashboard} label="Dashboard Utama" activeMenu={activeMenu} onClick={() => setActiveMenu('dashboard')} />              <MenuItem id="rekapitulasi" icon={BarChart2} label="Rekapitulasi & Rapor" activeMenu={activeMenu} onClick={(id) => { setActiveMenu(id); setIsSidebarOpen(false); }} isDarkMode={isDarkMode} />
               <MenuItem id="tahun-pelajaran" icon={Layers} label="Tahun Pelajaran & Kelas" activeMenu={activeMenu} onClick={(id) => { setActiveMenu(id); setIsSidebarOpen(false); }} isDarkMode={isDarkMode} />
               <MenuItem id="master-data" icon={Users} label="Master Data Siswa & Guru" activeMenu={activeMenu} onClick={(id) => { setActiveMenu(id); setIsSidebarOpen(false); }} isDarkMode={isDarkMode} />
               <MenuItem id="jadwal-piket" icon={Calendar} label="Jadwal Piket Guru" activeMenu={activeMenu} onClick={(id) => { setActiveMenu(id); setIsSidebarOpen(false); }} isDarkMode={isDarkMode} />
@@ -7013,7 +7265,7 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
 };
 
 /* ==============================================================
-   14. KOMPONEN MASTER DATA (DENGAN HAPUS MASAL, IMPORT, TEMPLATE CSV)
+   14. KOMPONEN MASTER DATA (DENGAN HAPUS MASAL, IMPORT, TEMPLATE CSV + JENIS KELAMIN)
 ============================================================== */
 const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logKehadiran, isDarkMode, tahunPelajaranAktif, daftarTahunPelajaran }) => {
   const [activeTab, setActiveTab] = useState('siswa');
@@ -7087,6 +7339,7 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
   const [formData, setFormData] = useState({ 
     nama: '', 
     nisn: '', 
+    jenis_kelamin: 'Laki-Laki', // Default lengkap
     kodeGuru: '',
     jabatan_kelas: '', 
     rfid: '', 
@@ -7167,6 +7420,7 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
     setFormData({ 
       nama: '', 
       nisn: '',
+      jenis_kelamin: 'Laki-Laki',
       kodeGuru: activeTab === 'guru' ? `GURU-${Date.now().toString().slice(-4)}` : '',
       jabatan_kelas: activeTab === 'guru' ? 'Guru Mata Pelajaran' : defaultKelas, 
       rfid: '', 
@@ -7178,11 +7432,21 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
   const handleOpenEdit = (data) => {
     setModalMode('edit');
     setEditingId(data.id);
-    const kelasCurrent = activeTab === 'siswa' ? (data.kelasPerTP?.[tahunPelajaranAktif] || daftarMasterKelas[0]?.nama || '') : data.jabatan_kelas;
+    
+    let kelasCurrent = '';
+    if (activeTab === 'siswa') {
+      let ko = data.kelasPerTP;
+      if (typeof ko === 'string') { try { ko = JSON.parse(ko); } catch (e) { ko = {}; } }
+      kelasCurrent = (ko?.[tahunPelajaranAktif] || data.jabatan_kelas || '').trim().toUpperCase();
+    } else {
+      kelasCurrent = data.jabatan_kelas || '';
+    }
+
     const fallbackAvatar = getAvatarUrl(data.nama);
     setFormData({ 
       nama: data.nama, 
       nisn: data.nisn || '',
+      jenis_kelamin: data.jenis_kelamin || data.jk || 'Laki-Laki',
       kodeGuru: data.kodeGuru || '',
       jabatan_kelas: kelasCurrent, 
       rfid: data.rfid, 
@@ -7257,7 +7521,6 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
       return;
     }
 
-    // Simpan ke database Supabase
     const { data, error } = await supabase.from('master_kelas').insert([{ nama: cleanKelas, keahlian: cleanKeahlian }]).select();
     if (error) {
       alert('Gagal menyimpan kelas ke Supabase: ' + error.message);
@@ -7332,6 +7595,7 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
         const newSiswa = {
           nama: formData.nama,
           nisn: formData.nisn ? formData.nisn.trim() : '',
+          jenis_kelamin: formData.jenis_kelamin || 'Laki-Laki',
           rfid: finalRfid,
           foto: finalFoto,
           kelasPerTP: initialKelasPerTP,
@@ -7357,6 +7621,7 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
         const updatedData = {
           nama: formData.nama,
           nisn: formData.nisn ? formData.nisn.trim() : '',
+          jenis_kelamin: formData.jenis_kelamin || 'Laki-Laki',
           rfid: finalRfid,
           foto: finalFoto,
           kelasPerTP: updatedKelasPerTP,
@@ -7380,7 +7645,7 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
     setIsModalOpen(false);
   };
 
-  // FUNGSI IMPORT CSV DENGAN VALIDASI KELAS MASTER
+  // FUNGSI IMPORT CSV DENGAN VALIDASI KELAS MASTER + KOLOM JENIS KELAMIN
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -7408,13 +7673,15 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
           const firstColLower = cols[0].toLowerCase();
           if (firstColLower === 'nama' || firstColLower.includes('nisn')) continue;
 
+          // Urutan Kolom CSV Siswa: Nama, NISN, Jenis Kelamin, Kelas, Konsentrasi Keahlian, RFID
           const nama = cols[0];
           const nisn = cols[1] || '';
-          const kelas = (cols[2] || '').trim().toUpperCase(); 
-          const keahlian = cols[3] || 'Konsentrasi Umum';
-          const rfid = cols[4] || '';
+          const rawJk = (cols[2] || 'Laki-Laki').trim().toLowerCase();
+          const jenis_kelamin = (rawJk.startsWith('p') || rawJk.includes('perempuan')) ? 'Perempuan' : 'Laki-Laki';
+          const kelas = (cols[3] || '').trim().toUpperCase(); 
+          const keahlian = cols[4] || 'Konsentrasi Umum';
+          const rfid = cols[5] || '';
 
-          // Validasi: Pastikan kelas pada CSV sudah terdaftar di Master Kelas
           const isKelasValid = daftarMasterKelas.some(k => k.nama.trim().toUpperCase() === kelas);
           if (!isKelasValid) {
             alert(`Gagal: Kelas "${kelas}" pada baris siswa "${nama}" belum terdaftar di Master Kelas! Harap buat kelasnya terlebih dahulu di menu "Kelola Kelas".`);
@@ -7427,6 +7694,7 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
           batchSiswaToInsert.push({
             nama,
             nisn,
+            jenis_kelamin,
             rfid: generatedRfid,
             foto: autoFoto,
             kelasPerTP: { [tahunPelajaranAktif]: kelas },
@@ -7447,7 +7715,6 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
           }
         }
       } else {
-        // Bagian Guru & Staff
         const newGuruList = [...dataGuru];
         for (let i = 1; i < lines.length; i++) {
           const line = lines[i];
@@ -7626,6 +7893,7 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
               <th className="px-3 py-3">No.</th>
               <th className="px-4 py-3">Foto & Nama</th>
               {activeTab === 'siswa' && <th className="px-4 py-3">NISN</th>}
+              {activeTab === 'siswa' && <th className="px-3 py-3 text-center">Jenis Kelamin</th>}
               {activeTab === 'guru' && <th className="px-4 py-3">Kode Guru</th>}
               <th className="px-4 py-3">{activeTab === 'guru' ? 'Jabatan' : `Kelas & Kejuruan`}</th>
               {activeTab === 'siswa' && <th className="px-4 py-3">Status TP</th>}
@@ -7639,6 +7907,7 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
                 const isChecked = selectedIds.includes(item.id);
                 const fallbackAvatar = getAvatarUrl(item.nama);
                 const avatarSrc = (item.foto && (item.foto.startsWith('data:image') || item.foto.startsWith('http'))) ? item.foto : fallbackAvatar;
+                const genderVal = item.jenis_kelamin || item.jk || 'Laki-Laki';
 
                 return (
                   <tr key={item.id} className={`${isDarkMode ? (isChecked ? 'bg-slate-800/90' : 'hover:bg-slate-800/50') : (isChecked ? 'bg-blue-50/60' : 'hover:bg-gray-50')} transition-colors`}>
@@ -7660,6 +7929,13 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
                     {activeTab === 'siswa' && (
                       <td className="px-4 py-3 font-mono text-[11px] font-semibold text-slate-400">
                         {item.nisn || '-'}
+                      </td>
+                    )}
+                    {activeTab === 'siswa' && (
+                      <td className="px-3 py-3 text-center font-bold text-xs">
+                        <span className={`px-2.5 py-1 rounded-full text-[11px] ${genderVal.toLowerCase().startsWith('p') ? 'bg-pink-500/10 text-pink-500 border border-pink-500/20' : 'bg-sky-500/10 text-sky-500 border border-sky-500/20'}`}>
+                          {genderVal}
+                        </span>
                       </td>
                     )}
                     {activeTab === 'guru' && (
@@ -7693,7 +7969,7 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
               })
             ) : (
               <tr>
-                <td colSpan={8} className="text-center py-12 text-gray-400 italic">Belum ada data warga sekolah. Silakan lakukan import massal atau tambah data baru.</td>
+                <td colSpan={9} className="text-center py-12 text-gray-400 italic">Belum ada data warga sekolah. Silakan lakukan import massal atau tambah data baru.</td>
               </tr>
             )}
           </tbody>
@@ -7705,7 +7981,7 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl text-white">
             <h3 className="text-lg font-bold mb-2">Pilih Kelas untuk Template CSV</h3>
-            <p className="text-xs text-slate-400 mb-4">Template yang diunduh akan otomatis disiapkan untuk kelas yang Anda pilih di bawah ini.</p>
+            <p className="text-xs text-slate-400 mb-4">Template yang diunduh mencakup kolom Jenis Kelamin (Laki-Laki / Perempuan).</p>
             
             <div className="mb-4">
               <label className="block text-xs font-medium text-slate-300 mb-1">PILIH KELAS</label>
@@ -7732,8 +8008,8 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
                   const masterKls = daftarMasterKelas.find(k => k.nama === selectedKelasTemplate);
                   const keahlianDefault = masterKls ? masterKls.keahlian : 'Konsentrasi Umum';
 
-                  const csvContent = "data:text/csv;charset=utf-8,Nama Lengkap,NISN,Kelas,Konsentrasi Keahlian,RFID\n" +
-                                     `Contoh Siswa,2026001,${selectedKelasTemplate},${keahlianDefault},RFID-001\n`;
+                  const csvContent = "data:text/csv;charset=utf-8,Nama Lengkap,NISN,Jenis Kelamin,Kelas,Konsentrasi Keahlian,RFID\n" +
+                                     `Contoh Siswa,2026001,Laki-Laki,${selectedKelasTemplate},${keahlianDefault},RFID-001\n`;
                   
                   const encodedUri = encodeURI(csvContent);
                   const link = document.createElement("a");
@@ -7872,15 +8148,28 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
                 </div>
 
                 {activeTab === 'siswa' ? (
-                  <div>
-                    <label className={`block text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'} uppercase tracking-wider mb-1`}>Nomor NISN</label>
-                    <input 
-                      type="text" 
-                      value={formData.nisn} 
-                      onChange={(e) => setFormData({...formData, nisn: e.target.value})} 
-                      className={`w-full border rounded-lg p-2.5 text-sm ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : ''}`} 
-                      placeholder="Contoh: 0081234567" 
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className={`block text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'} uppercase tracking-wider mb-1`}>Nomor NISN</label>
+                      <input 
+                        type="text" 
+                        value={formData.nisn} 
+                        onChange={(e) => setFormData({...formData, nisn: e.target.value})} 
+                        className={`w-full border rounded-lg p-2.5 text-sm ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : ''}`} 
+                        placeholder="Contoh: 0081234567" 
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'} uppercase tracking-wider mb-1`}>Jenis Kelamin</label>
+                      <select 
+                        value={formData.jenis_kelamin} 
+                        onChange={(e) => setFormData({...formData, jenis_kelamin: e.target.value})}
+                        className={`w-full border rounded-lg p-2.5 text-sm ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white'}`}
+                      >
+                        <option value="Laki-Laki">Laki-Laki</option>
+                        <option value="Perempuan">Perempuan</option>
+                      </select>
+                    </div>
                   </div>
                 ) : (
                   <div>
@@ -7905,21 +8194,24 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
                     <input type="text" required value={formData.jabatan_kelas} onChange={(e) => setFormData({...formData, jabatan_kelas: e.target.value})} className={`w-full border rounded-lg p-2.5 text-sm ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : ''}`} placeholder="Jabatan guru..." />
                   ) : (
                     <select 
-                      required 
-                      value={formData.jabatan_kelas} 
-                      onChange={(e) => setFormData({...formData, jabatan_kelas: e.target.value})} 
-                      className={`w-full border rounded-lg p-2.5 text-sm ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white'}`}
-                    >
-                      {daftarMasterKelas.length > 0 ? (
-                        daftarMasterKelas.map((kelasItem) => (
-                          <option key={kelasItem.nama} value={kelasItem.nama} className="bg-slate-900 text-white">
+                    required 
+                    value={formData.jabatan_kelas} 
+                    onChange={(e) => setFormData({...formData, jabatan_kelas: e.target.value})} 
+                    className={`w-full border rounded-lg p-2.5 text-sm ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white'}`}
+                  >
+                    {daftarMasterKelas.length > 0 ? (
+                      daftarMasterKelas.map((kelasItem) => {
+                        const namaKelasBersih = kelasItem.nama.trim().toUpperCase();
+                        return (
+                          <option key={namaKelasBersih} value={namaKelasBersih} className="bg-slate-900 text-white">
                             {kelasItem.nama} — ({kelasItem.keahlian})
                           </option>
-                        ))
-                      ) : (
-                        <option value="">Belum ada kelas master. Tambahkan dulu di menu 'Kelola Kelas'</option>
-                      )}
-                    </select>
+                        );
+                      })
+                    ) : (
+                      <option value="">Belum ada kelas master. Tambahkan dulu di menu 'Kelola Kelas'</option>
+                    )}
+                  </select>
                   )}
                 </div>
 
