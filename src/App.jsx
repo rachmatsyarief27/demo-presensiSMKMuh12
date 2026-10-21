@@ -8376,3 +8376,4 @@ const Footer = () => {
     </footer>
   );
 };
+
