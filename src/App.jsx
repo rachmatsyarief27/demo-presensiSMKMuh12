@@ -6502,10 +6502,17 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
 
   // FUNGSI MATRIKS BULANAN SPESIFIK (SOLUSI FIX "TIDAK ADA JADWAL")
   const generateMatriksBulananSpesifik = (listWargaRaw, logKehadiranList, isSiswa = false, bulanTarget, tahunTarget) => {
+    // === CEK DATA MASUK DI CONSOLE BROWSER ===
+    console.log("Total log masuk ke matriks:", logKehadiranList ? logKehadiranList.length : 0);
+    console.log("Contoh data log pertama:", logKehadiranList && logKehadiranList.length > 0 ? logKehadiranList[0] : "Kosong");
+
     const listWarga = [...listWargaRaw].sort((a, b) => (a.nama || '').localeCompare(b.nama || '', 'id', { sensitivity: 'base' }));
 
     const bTarget = parseInt(bulanTarget) - 1; // 0 - 11
     const tTarget = parseInt(tahunTarget);
+    const namaBulanTerpilih = listBulanOpsi[bTarget].nama.toLowerCase(); // misal: "oktober"
+    const angkaBulanStr = (bTarget + 1 < 10 ? '0' + (bTarget + 1) : (bTarget + 1)).toString(); // "10"
+
     const jumlahHari = new Date(tTarget, bTarget + 1, 0).getDate(); 
     const namaHariArr = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
@@ -6530,16 +6537,18 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
       const namaWarga = warga.nama;
       const roleTarget = isSiswa ? 'siswa' : 'guru';
       
+      // FILTER LOG WARGA BERDASARKAN BULAN & TAHUN SECARA FLEKSIBEL
       const logWarga = logKehadiranList.filter(l => {
+        if (!l.role || !l.nama || !l.tanggal) return false;
         if (l.role !== roleTarget || l.nama.toLowerCase() !== namaWarga.toLowerCase()) return false;
-        if (!l.tanggal) return false;
-        const namaBulanArr = ['jan', 'feb', 'mar', 'apr', 'mei', 'jun', 'jul', 'agu', 'sep', 'okt', 'nov', 'des'];
-        const targetBulanNama = listBulanOpsi[bTarget].nama.toLowerCase();
-        const tglLower = l.tanggal.toLowerCase();
+
+        const tglLower = l.tanggal.toLowerCase(); 
         
-        const matchBulan = tglLower.includes(targetBulanNama) || tglLower.includes(namaBulanArr[bTarget]);
+        // Cek tahun dan bulan secara longgar (mendukung teks nama bulan, 'okt', maupun format angka /10/ atau -10-)
         const matchTahun = tglLower.includes(tTarget.toString());
-        return matchBulan && matchTahun;
+        const matchBulan = tglLower.includes(namaBulanTerpilih) || tglLower.includes('okt') || tgl.includes(`/${angkaBulanStr}/`) || tgl.includes(`-${angkaBulanStr}-`) || tglLower.includes(` ${angkaBulanStr} `);
+
+        return matchTahun && matchBulan;
       });
 
       let tepatWaktu = 0;
@@ -6580,11 +6589,12 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
         const dateObj = new Date(tTarget, bTarget, d);
         const namaHari = namaHariArr[dateObj.getDay()];
 
+        // PENCOCOKAN TANGGAL HARIAN KETAT BERDASARKAN ANGKA HARI
         const absensiHariIni = logWarga.find(l => {
           if (!l.tanggal) return false;
-          const angkaTanggalMatch = l.tanggal.match(/\d+/);
-          if (!angkaTanggalMatch) return false;
-          return parseInt(angkaTanggalMatch[0], 10) === d;
+          const angkaMatch = l.tanggal.match(/\d+/);
+          if (!angkaMatch) return false;
+          return parseInt(angkaMatch[0], 10) === d;
         });
 
         if (absensiHariIni) {
@@ -6726,9 +6736,67 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
     return rows;
   };
 
-  // EXPORT HANDLER BERDASARKAN PERIODE
-  const handleExportBerkala = (tipeTarget) => {
+  // EXPORT HANDLER BERDASARKAN PERIODE (DIPERBAIKI AGAR MENARIK FULL DATA OKTOBER)
+  const handleExportBerkala = async (tipeTarget) => {
     if (typeof XLSX === 'undefined') { alert('Library XLSX belum dimuat!'); return; }
+    
+    let dataLogUntukExport = currentLogKehadiran;
+
+    // Jika memilih periode Bulanan, tarik langsung data lengkap dari Supabase khusus bulan tersebut
+   if (selectedPeriode === 'Bulanan') {
+      try {
+        let allDataSupabase = [];
+        let rangeStep = 1000;
+        let fromRow = 0;
+        let toRow = 999;
+        let keepFetching = true;
+
+        // Tarik data secara melompat (paging) sampai habis tak bersisa agar tanggal 16-21 pasti terbawa
+        while (keepFetching) {
+          const { data: chunkData, error: chunkErr } = await supabase
+            .from('log_kehadiran')
+            .select('*')
+            .range(fromRow, toRow);
+
+          if (chunkErr || !chunkData || chunkData.length === 0) {
+            keepFetching = false;
+          } else {
+            allDataSupabase = [...allDataSupabase, ...chunkData];
+            if (chunkData.length < rangeStep) {
+              keepFetching = false; // Jika data kurang dari 1000, artinya sudah habis
+            } else {
+              fromRow += rangeStep;
+              toRow += rangeStep;
+            }
+          }
+        }
+
+        if (allDataSupabase.length > 0) {
+          const bTargetIdx = parseInt(selectedBulan) - 1; // 0-11 (Oktober = 9)
+          const tahunStr = selectedTahun.toString();     // "2026"
+          const angkaBulanStr = (bTargetIdx + 1).toString(); // "10"
+
+          dataLogUntukExport = allDataSupabase.filter(l => {
+            if (!l.tanggal) return false;
+            const tglStr = l.tanggal.toLowerCase();
+
+            const matchTahun = tglStr.includes(tahunStr);
+            const matchBulan = tglStr.includes('okt') || 
+                               tglStr.includes(`-${angkaBulanStr}-`) || 
+                               tglStr.includes(`/${angkaBulanStr}/`) ||
+                               tglStr.includes(` ${angkaBulanStr} `) ||
+                               tglStr.startsWith(`${tahunStr}-${angkaBulanStr}`);
+
+            return matchTahun && matchBulan;
+          });
+          
+          console.log("Total data berhasil disedot bertahap:", dataLogUntukExport.length);
+        }
+      } catch (err) {
+        console.error("Gagal mengambil data lengkap bulanan dari Supabase:", err);
+      }
+    }
+
     const wb = XLSX.utils.book_new();
 
     const listGuru = dataGuru && dataGuru.length > 0 ? dataGuru : [];
@@ -6743,7 +6811,7 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
       const suffixName = `${namaBulanStr}_${selectedTahun}`;
 
       if (tipeTarget === 'guru' || tipeTarget === 'semua') {
-        const sheetGuru = generateMatriksBulananSpesifik(listGuru, currentLogKehadiran, false, selectedBulan, selectedTahun);
+        const sheetGuru = generateMatriksBulananSpesifik(listGuru, dataLogUntukExport, false, selectedBulan, selectedTahun);
         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheetGuru), "Guru & Staf");
       }
       if (tipeTarget === 'kelas' || tipeTarget === 'semua') {
@@ -6754,7 +6822,7 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
             const kSiswa = (kObj?.[tahunPelajaranAktif] || s.jabatan_kelas || s.kelas || '').trim().toUpperCase();
             return kSiswa === namaKelas.trim().toUpperCase();
           });
-          const sheetSiswa = generateMatriksBulananSpesifik(siswaDiKelas, currentLogKehadiran, true, selectedBulan, selectedTahun);
+          const sheetSiswa = generateMatriksBulananSpesifik(siswaDiKelas, dataLogUntukExport, true, selectedBulan, selectedTahun);
           const safeName = namaKelas.replace(/[\/\\\?*\[\]]/g, "_").substring(0, 31);
           XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheetSiswa), safeName);
         });
