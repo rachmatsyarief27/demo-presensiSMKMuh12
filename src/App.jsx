@@ -79,11 +79,11 @@ const KontenDashboard = ({ dataSiswa, dataGuru, logKehadiran, infoSekolah, isDar
           </span>
           <h2 className="text-2xl font-black mt-2">Dashboard Utama & Statistik Sekolah</h2>
           <p className={`text-sm ${isDarkMode ? 'text-slate-300' : 'text-blue-100'}`}>
-            {infoSekolah?.nama || 'Sistem Manajemen Kehadiran Sekolah'} &bull; Pantau data kehadiran, rombel, dan statistik warga sekolah secara real-time.
+            {infoSekolah?.nama || 'Sistem Manajemen Kehadiran Sekolah'} &bull; Pantau statistik jumlah Guru & Karyawan, Siswa, dan rombongan belajar aktif secara real-time.
           </p>
         </div>
         <div className="flex items-center gap-3 bg-black/10 p-3 rounded-xl border border-white/10 backdrop-blur-md">
-          <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+          <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center overflow-hidden shadow-lg p-2 flex-shrink-0">
             <img src={infoSekolah?.logo || ''} alt="Logo" className="w-full h-full object-contain" />
           </div>
           <div>
@@ -108,10 +108,10 @@ const KontenDashboard = ({ dataSiswa, dataGuru, logKehadiran, infoSekolah, isDar
           </div>
         </div>
 
-        {/* Card 2: Guru & Staf */}
+        {/* Card 2: Guru & Karyawan */}
         <div className={`p-5 rounded-2xl border shadow-sm ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-gray-100 text-gray-800'} flex items-center justify-between`}>
           <div className="space-y-1">
-            <p className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Guru & Staf</p>
+            <p className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Guru & Karyawan</p>
             <h3 className="text-3xl font-black text-emerald-600">{dataGuru?.length || 0}</h3>
             <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Pendidik & Tenaga Kependidikan</p>
           </div>
@@ -137,19 +137,19 @@ const KontenDashboard = ({ dataSiswa, dataGuru, logKehadiran, infoSekolah, isDar
           <div className="space-y-1">
             <p className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Siswa Laki-Laki</p>
             <h3 className="text-3xl font-black text-sky-500">{totalLakiGlobal || 0}</h3>
-            <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Total Putra</p>
+            <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Total siswa laki-laki</p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-500 flex items-center justify-center">
             <Users size={24} />
           </div>
         </div>
 
-        {/* Card 5: Siswa Perempuan */}
+        {/* Card 5: Siswi Perempuan */}
         <div className={`p-5 rounded-2xl border shadow-sm ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-gray-100 text-gray-800'} flex items-center justify-between`}>
           <div className="space-y-1">
-            <p className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Siswa Perempuan</p>
+            <p className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Siswi Perempuan</p>
             <h3 className="text-3xl font-black text-pink-500">{totalPerempuanGlobal || 0}</h3>
-            <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Total Putri</p>
+            <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Total Siswi perempuan</p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-pink-500/10 text-pink-500 flex items-center justify-center">
             <Users size={24} />
@@ -553,7 +553,7 @@ const [daftarMasterKelas, setDaftarMasterKelas] = useState([]);
   if (activeMenu === 'absen-rfid') {
     return (
       <LayarPenuhRFID 
-        onBack={() => setActiveMenu('absen-sekolah')} 
+        onBack={() => setActiveMenu('dashboard')} 
         dataGuru={dataGuru}
         dataSiswa={dataSiswa}
         logKehadiran={logKehadiran}
@@ -570,7 +570,7 @@ const [daftarMasterKelas, setDaftarMasterKelas] = useState([]);
   if (activeMenu === 'mode-piket') {
     return (
       <ModePiketScreen 
-        onBack={() => setActiveMenu('absen-sekolah')}
+        onBack={() => setActiveMenu('dashboard')}
         dataGuru={dataGuru}
         dataSiswa={dataSiswa}
         logKehadiran={logKehadiran}
@@ -589,7 +589,7 @@ const [daftarMasterKelas, setDaftarMasterKelas] = useState([]);
   if (activeMenu === 'info-sekolah-tv') {
     return (
       <ModeInfoSekolahTV 
-        onBack={() => setActiveMenu('absen-sekolah')}
+        onBack={() => setActiveMenu('dashboard')}
         infoSekolah={infoSekolah}
         logKehadiran={logKehadiran}
         dataGuru={dataGuru}
@@ -3502,7 +3502,7 @@ const totalTerlambat = logKehadiran.filter(l => {
             {infoSekolah.logo ? <img src={infoSekolah.logo} alt="Logo" className="w-full h-full object-contain" /> : <School size={36} className="text-blue-600" />}
           </div>
           <div>
-            <h1 className="text-xl md:text-3xl font-black tracking-wider uppercase text-blue-400 leading-tight">{infoSekolah.nama}</h1>
+            <h1 className="text-xl md:text-3xl font-black tracking-wider uppercase text-green-400 leading-tight">{infoSekolah.nama}</h1>
             <p className="text-[11px] md:text-xs text-slate-300 font-semibold tracking-wide mt-0.5">SISTEM INFORMASI KEHADIRAN DIGITAL &bull; TP {tahunPelajaranAktif}</p>
             {infoSekolah.alamat && (
               <p className="text-[10px] md:text-xs text-slate-400 mt-1 flex items-center justify-center lg:justify-start gap-1">
@@ -3584,7 +3584,8 @@ const totalTerlambat = logKehadiran.filter(l => {
             <Layers size={18} /> Rekap Kehadiran Siswa Per Kelas Hari Ini
           </h3>
           
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 md:gap-3.5 max-h-[200px] md:max-h-[220px] overflow-y-auto pr-1">
+          {/* Diubah menjadi grid-cols-5 agar pas 5 kotak jejer kesamping per baris */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4 max-h-[260px] overflow-y-auto pr-1">
             {daftarKelasAktif.length > 0 ? (
               daftarKelasAktif.map((namaKelas, idx) => {
                 const totalSiswaDiKelas = dataSiswa.filter(s => 
@@ -3594,8 +3595,22 @@ const totalTerlambat = logKehadiran.filter(l => {
 
                 const siswaHadirDiKelas = logSiswaHadirHariIni.filter(l => l.jabatan_kelas === namaKelas).length;
 
+                // Logika penentuan warna border berdasarkan tingkat kelas (X, XI, XII)
+                let borderCustom = "border-slate-700/70"; // default
+                const upperName = namaKelas.toUpperCase();
+                if (upperName.startsWith("X ")) {
+                  borderCustom = "border-[#007CC3]"; // Ocean Blue untuk Kelas X
+                } else if (upperName.startsWith("XI ")) {
+                  borderCustom = "border-[#FFD453]"; // Sunflower untuk Kelas XI
+                } else if (upperName.startsWith("XII ")) {
+                  borderCustom = "border-[#FF3B67]"; // Coral Pink untuk Kelas XII
+                }
+
                 return (
-                  <div key={idx} className="bg-slate-800/80 border border-slate-700/70 p-3 rounded-2xl flex flex-col justify-between text-left shadow-md">
+                  <div 
+                    key={idx} 
+                    className={`bg-slate-800/80 border-2 ${borderCustom} p-3.5 rounded-2xl flex flex-col justify-between text-left shadow-md transition hover:bg-slate-800`}
+                  >
                     <span className="font-bold text-xs md:text-sm text-slate-100 truncate">{namaKelas}</span>
                     <div className="flex justify-between items-baseline pt-1.5 border-t border-slate-700/60 mt-1.5">
                       <span className="text-[10px] text-slate-400">Hadir:</span>
@@ -7338,6 +7353,7 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
 const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logKehadiran, isDarkMode, tahunPelajaranAktif, daftarTahunPelajaran }) => {
   const [activeTab, setActiveTab] = useState('siswa');
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeAngkatanTab, setActiveAngkatanTab] = useState('Semua');
   
   const [daftarMasterKelas, setDaftarMasterKelas] = useState([]);
 
@@ -7393,10 +7409,18 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
     return (ko?.[tahunPelajaranAktif] || s.jabatan_kelas || '').trim().toUpperCase();
   }).filter(Boolean);
 
-  const daftarNamaKelasFilter = ['Semua', ...new Set([
+  const daftarNamaKelasUnik = [...new Set([
     ...daftarMasterKelas.map(k => k.nama.trim().toUpperCase()),
     ...kelasDariSiswaAktifFilter
   ])].sort();
+
+  // Filter daftar kelas di dropdown agar otomatis mengikuti activeAngkatanTab yang sedang diklik
+  const daftarNamaKelasFilter = ['Semua', ...daftarNamaKelasUnik.filter(k => {
+    if (activeAngkatanTab === 'X') return k.startsWith('X ');
+    if (activeAngkatanTab === 'XI') return k.startsWith('XI ');
+    if (activeAngkatanTab === 'XII') return k.startsWith('XII ');
+    return true;
+  })];
 
   const [selectedKelasFilter, setSelectedKelasFilter] = useState('Semua');
 
@@ -7864,8 +7888,20 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
                         item.rfid.toLowerCase().includes(searchQuery.toLowerCase()) || 
                         (item.nisn && item.nisn.toLowerCase().includes(searchQuery.toLowerCase())) ||
                         (item.kodeGuru && item.kodeGuru.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    // --- SISIPKAN BLOK KODE INI ---
+    let matchAngkatan = true;
+    if (activeTab === 'siswa' && activeAngkatanTab !== 'Semua') {
+      const k = (item.jabatan_kelas || '').trim().toUpperCase();
+      if (activeAngkatanTab === 'X') matchAngkatan = k.startsWith('X ');
+      if (activeAngkatanTab === 'XI') matchAngkatan = k.startsWith('XI ');
+      if (activeAngkatanTab === 'XII') matchAngkatan = k.startsWith('XII ');
+    }
+    // ----------------------------
+
     const matchKelas = activeTab === 'siswa' && selectedKelasFilter !== 'Semua' ? item.jabatan_kelas.trim().toUpperCase() === selectedKelasFilter.trim().toUpperCase() : true;
-    return matchSearch && matchKelas;
+    
+    return matchSearch && matchAngkatan && matchKelas;
   }).sort((a, b) => a.nama.localeCompare(b.nama));
 
   const personalLogs = selectedPersonHistory 
@@ -7888,6 +7924,25 @@ const KontenMasterData = ({ dataGuru, setDataGuru, dataSiswa, setDataSiswa, logK
           <button onClick={handleOpenAdd} className="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-1 text-xs font-semibold cursor-pointer shadow transition md:hidden"><Plus size={15} /> Tambah</button>
         </div>
 
+        {/* TAB NAVIGASI ANGKATAN (SEMUA, KELAS X, XI, XII) */}
+        {activeTab === 'siswa' && (
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-slate-800/60 pb-2">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">Angkatan:</span>
+            {['Semua', 'X', 'XI', 'XII'].map((kat) => (
+              <button
+                key={kat}
+                onClick={() => setActiveAngkatanTab(kat)}
+                className={`px-3.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex-shrink-0 ${
+                  activeAngkatanTab === kat 
+                    ? 'bg-blue-600 text-white shadow' 
+                    : `${isDarkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`
+                }`}
+              >
+                {kat === 'Semua' ? 'Semua Angkatan' : `Kelas ${kat}`}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
           {selectedIds.length > 0 && (
             <button onClick={handleBulkDelete} className="bg-red-600 text-white px-3 py-2 rounded-lg flex items-center gap-1 text-xs font-semibold cursor-pointer shadow transition flex-shrink-0">
@@ -8372,7 +8427,7 @@ const MenuItem = ({ id, icon: Icon, label, activeMenu, onClick, isDarkMode }) =>
 const Footer = () => {
   return (
     <footer className="w-full text-center py-4 mt-auto border-t border-slate-800/60 text-slate-500 text-xs tracking-wide">
-      Code & System by <span className="italic text-slate-400 font-medium">Rchmt_syrf</span> © 2026 — v1.1.09
+      Code & System by <span className="italic text-slate-400 font-medium">Rchmt_syrf</span> © 2026 — v1.27.10
     </footer>
   );
 };
