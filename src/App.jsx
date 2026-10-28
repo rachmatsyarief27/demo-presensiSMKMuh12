@@ -479,76 +479,163 @@ const [daftarMasterKelas, setDaftarMasterKelas] = useState([]);
     }
   };
 
+  // kotak login //
   if (!isAdminLoggedIn) {
-    return (
-      <div className={`h-screen w-screen ${isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-900 text-gray-800'} flex items-center justify-center p-4 font-sans transition-colors`}>
-        <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-700'} w-full max-w-md rounded-3xl shadow-2xl p-8 space-y-6 border`}>
-          <div className="text-center space-y-2">
-            <div className="w-16 h-16 bg-blue-600 text-white rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-blue-600/30">
-              <Lock size={32} />
-            </div>
-            <h1 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'} tracking-wide`}>LOGIN ADMINISTRATOR</h1>
-            
-            {/* Nama dan Alamat Sekolah */}
-            <div className="space-y-0.5 pt-1">
-              <p className={`text-xs font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{infoSekolah.nama}</p>
-              <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{infoSekolah.alamat || 'Alamat sekolah belum diatur'}</p>
-            </div>
+  return (
+    <div className={`h-screen w-screen ${isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-950 text-gray-800'} flex flex-col justify-between font-sans transition-colors relative overflow-hidden`}>
+      
+      {/* 💡 1. ORNAMEN LATAR BELAKANG & GARIS FUTURISTIK */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b20_1px,transparent_1px),linear-gradient(to_bottom,#1e293b20_1px,transparent_1px)] bg-[size:3rem_3rem] pointer-events-none" />
+      
+      {/* Efek Cahaya / Glow Sudut */}
+      <div className="absolute -top-32 -left-32 w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute -bottom-32 -right-32 w-[500px] h-[500px] bg-emerald-600/15 rounded-full blur-[120px] pointer-events-none" />
+
+      {/* Garis Diagonal Aksen Kanan Bawah */}
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-tl from-emerald-500/20 via-blue-600/10 to-transparent pointer-events-none transform rotate-12 translate-x-20 translate-y-20 blur-2xl" />
+
+      {/* HEADER ATAS (Logo, Nama Sekolah & Slogan Sunflower) */}
+      <div className="relative z-20 flex items-center justify-between px-8 py-5 border-b border-slate-800/60 bg-slate-950/40 backdrop-blur-md">
+        <div className="flex items-center space-x-4">
+          {/* Kotak Logo Diperbesar */}
+          <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-lg p-1.5 flex-shrink-0">
+            {infoSekolah.logo ? (
+              <img src={infoSekolah.logo} alt="Logo" className="w-full h-full object-contain" />
+            ) : (
+              <Lock size={28} className="text-blue-600" />
+            )}
           </div>
-
-          {loginError && (
-            <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-xl text-xs font-medium text-center">
-              {loginError}
-            </div>
-          )}
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className={`block text-xs font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-500'} uppercase tracking-wider mb-1`}>Username</label>
-              <div className="relative">
-                <User className="absolute inset-y-0 left-3 my-auto h-5 w-5 text-slate-400" />
-                <input
-                  type="text"
-                  required
-                  value={usernameInput}
-                  onChange={(e) => setUsernameInput(e.target.value)}
-                  className={`w-full pl-11 pr-4 py-3 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'} border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600`}
-                  placeholder="Masukkan username..."
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className={`block text-xs font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-500'} uppercase tracking-wider mb-1`}>Password</label>
-              <div className="relative">
-                <Lock className="absolute inset-y-0 left-3 my-auto h-5 w-5 text-slate-400" />
-                <input
-                  type="password"
-                  required
-                  value={passwordInput}
-                  onChange={(e) => setPasswordInput(e.target.value)}
-                  className={`w-full pl-11 pr-4 py-3 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'} border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600`}
-                  placeholder="Masukkan password..."
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-blue-600/30 cursor-pointer text-sm tracking-wide"
-            >
-              Masuk ke Dasbor
-            </button>
-          </form>
-
-          <div className={`${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-50 border text-slate-500'} p-4 rounded-xl text-center text-xs space-y-1`}>
-            <p className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>Akun Default:</p>
-            <p>Username: <span className="font-mono font-bold text-blue-500">{adminCredential.username}</span> | Password: <span className="font-mono font-bold text-blue-500">{adminCredential.password}</span></p>
+          {/* Teks Nama Sekolah Diperbesar */}
+          <div>
+            <h2 className="text-base font-black text-white tracking-wider">{infoSekolah.nama}</h2>
+            <p className="text-xs text-slate-300 font-medium tracking-wide">Islami, Terampil, Mandiri, Dan Siap Kerja!</p>
           </div>
         </div>
+
+        {/* Slogan Kanan Atas (Warna Sunflower) */}
+        <div className="flex items-center space-x-6">
+          <p className="hidden md:block text-xs font-semibold italic text-yellow-400 tracking-wider font-serif">
+            ✨ "SMK Muhammadiyah 12 Jakarta Unggul Dan Berkemajuan!"
+          </p>
+          <button
+            type="button"
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className="relative z-50 p-2.5 rounded-xl bg-slate-900 border border-slate-700 hover:bg-slate-800 text-yellow-400 transition cursor-pointer shadow-lg"
+            title="Ganti Mode Tema"
+          >
+            {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+        </div>
       </div>
-    );
-  }
+
+      {/* 💡 3. KONTEN UTAMA (Sisi Kiri: Visual Gedung / Sisi Kanan: Kotak Login) */}
+      <div className="relative z-10 flex-1 grid grid-cols-1 lg:grid-cols-12 items-center px-6 lg:px-16 gap-8 overflow-y-auto py-6">
+        
+        {/* SISI KIRI: Ilustrasi / Foto Gedung Sekolah */}
+        <div className="hidden lg:flex lg:col-span-7 flex-col justify-center space-y-6 pr-8 relative">
+          {/* Efek kotak bingkai transparan estetik di belakang */}
+          <div className="absolute -inset-4 bg-gradient-to-r from-blue-900/20 to-emerald-900/10 rounded-3xl blur-xl pointer-events-none" />
+          
+          <div className="relative rounded-3xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-900/50 backdrop-blur-sm group">
+            {/* Foto Gedung Sekolah (Bisa diganti URL foto gedung asli SMK Muh 12) */}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent z-10" />
+            <img 
+              src="/gedung-sekolah.jpg" 
+              alt="Gedung SMK Muhammadiyah 12 Jakarta" 
+              className="w-full h-[420px] object-cover object-center group-hover:scale-105 transition duration-700 opacity-80"
+            />
+            
+            {/* Teks Informasi di atas foto */}
+            <div className="absolute bottom-6 left-6 right-6 z-20 space-y-2">
+              <span className="px-3 py-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[10px] font-bold uppercase tracking-widest rounded-full">
+                Sistem Informasi Resmi
+              </span>
+              <h1 className="text-2xl font-black text-white tracking-wide">
+                PRESENSI DIGITAL & KEHADIRAN SISWA
+              </h1>
+              <p className="text-xs text-slate-300 leading-relaxed max-w-xl">
+                {infoSekolah.alamat || 'Jl. H. Murtadho No. 2A, Tugu Utara, Koja, Jakarta Utara 14260'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* SISI KANAN: Kotak Form Login Administrator */}
+        <div className="lg:col-span-5 flex justify-center w-full">
+          <div className="w-full max-w-md bg-slate-900/90 border border-slate-800 backdrop-blur-xl rounded-3xl shadow-2xl p-8 space-y-6 relative">
+            
+            <div className="text-center space-y-2">
+              <h2 className="text-xl font-black text-white tracking-wider">
+                LOGIN <span className="text-emerald-400">ADMINISTRATOR</span>
+              </h2>
+              <p className="text-xs text-slate-400">Masukkan Akun Anda Dengan Benar Untuk Mengelola Sistem Aplikasi.</p>
+            </div>
+
+            {loginError && (
+              <div className="bg-red-950/80 border border-red-800 text-red-400 p-3 rounded-xl text-xs font-medium text-center">
+                {loginError}
+              </div>
+            )}
+
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Username</label>
+                <div className="relative">
+                  <User className="absolute inset-y-0 left-3.5 my-auto h-5 w-5 text-slate-500" />
+                  <input
+                    type="text"
+                    required
+                    value={usernameInput}
+                    onChange={(e) => setUsernameInput(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3.5 bg-slate-800/80 border border-slate-700 text-white rounded-xl text-sm focus:outline-none focus:border-emerald-500 transition placeholder:text-slate-500"
+                    placeholder="Masukkan username..."
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Password</label>
+                <div className="relative">
+                  <Lock className="absolute inset-y-0 left-3.5 my-auto h-5 w-5 text-slate-500" />
+                  <input
+                    type="password"
+                    required
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3.5 bg-slate-800/80 border border-slate-700 text-white rounded-xl text-sm focus:outline-none focus:border-emerald-500 transition placeholder:text-slate-500"
+                    placeholder="Masukkan password..."
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 rounded-xl transition shadow-lg shadow-blue-600/30 cursor-pointer text-sm tracking-widest uppercase"
+              >
+                Masuk ke Dasbor
+              </button>
+            </form>
+
+            {/* Informasi Bantuan Akses */}
+            <div className="bg-slate-800/50 border border-slate-700/50 p-3.5 rounded-xl text-center text-xs text-slate-400">
+              <p className="font-medium leading-relaxed">
+                ℹ️ Butuh bantuan akses? Silakan hubungi Admin Aplikasi Sekolah SMK Muhammadiyah 12 Jakarta.
+              </p>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      {/* 💡 4. FOOTER TERPUSAT DI BAWAH */}
+      <div className="relative z-20 w-full bg-slate-950/60 backdrop-blur-md border-t border-slate-800/60">
+        <Footer />
+      </div>
+
+    </div>
+  );
+}
 
   if (activeMenu === 'absen-rfid') {
     return (
