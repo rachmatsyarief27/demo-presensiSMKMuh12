@@ -6644,11 +6644,15 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
         if (!l.role || !l.nama || !l.tanggal) return false;
         if (l.role !== roleTarget || l.nama.toLowerCase() !== namaWarga.toLowerCase()) return false;
 
-        const tglLower = l.tanggal.toLowerCase(); 
+        // PASTIKAN MENGGUNAKAN tglStr (BUKAN tgl)
+        const tglStr = l.tanggal.toLowerCase(); 
         
-        // Cek tahun dan bulan secara longgar (mendukung teks nama bulan, 'okt', maupun format angka /10/ atau -10-)
-        const matchTahun = tglLower.includes(tTarget.toString());
-        const matchBulan = tglLower.includes(namaBulanTerpilih) || tglLower.includes('okt') || tgl.includes(`/${angkaBulanStr}/`) || tgl.includes(`-${angkaBulanStr}-`) || tglLower.includes(` ${angkaBulanStr} `);
+        const matchTahun = tglStr.includes(tTarget.toString());
+        const matchBulan = tglStr.includes('nov') || 
+                           tglStr.includes(namaBulanTerpilih) || 
+                           tglStr.includes(`-${angkaBulanStr}-`) || 
+                           tglStr.includes(`/${angkaBulanStr}/`) || 
+                           tglStr.includes(` ${angkaBulanStr} `);
 
         return matchTahun && matchBulan;
       });
@@ -6874,20 +6878,31 @@ const KontenRekapitulasi = ({ logKehadiran, arsipAbsensi, setArsipAbsensi, dataS
         }
 
         if (allDataSupabase.length > 0) {
-          const bTargetIdx = parseInt(selectedBulan) - 1; // 0-11 (Oktober = 9)
-          const tahunStr = selectedTahun.toString();     // "2026"
-          const angkaBulanStr = (bTargetIdx + 1).toString(); // "10"
+          const bTargetIdx = parseInt(selectedBulan) - 1; // 0 - 11 (November = 10)
+          const tahunStr = selectedTahun.toString();      // "2026"
+          const angkaBulanStr = (bTargetIdx + 1).toString(); // "11"
 
           dataLogUntukExport = allDataSupabase.filter(l => {
             if (!l.tanggal) return false;
-            const tglStr = l.tanggal.toLowerCase();
+            const tglStr = l.tanggal.toLowerCase(); // contoh: "2 nov 2026"
 
+            // 1. Wajib cocok tahunnya
             const matchTahun = tglStr.includes(tahunStr);
-            const matchBulan = tglStr.includes('okt') || 
+            if (!matchTahun) return false;
+
+            // 2. Pencocokan bulan yang presisi: 
+            // Karena format tanggal di database menggunakan "Nov", kita deteksi "nov" (jika bulan 11) 
+            // atau angka bulannya, sekaligus kita cegah agar bulan lain tidak ikut masuk.
+            const targetBulanNama = listBulanOpsi[bTargetIdx].nama.toLowerCase(); // "november"
+            
+            // Jika yang dipilih November, pastikan string mengandung 'nov' atau 'november' atau angka 11
+            const matchBulan = (selectedBulan === '11' && (tglStr.includes('nov') || tglStr.includes(targetBulanNama))) ||
                                tglStr.includes(`-${angkaBulanStr}-`) || 
                                tglStr.includes(`/${angkaBulanStr}/`) ||
-                               tglStr.includes(` ${angkaBulanStr} `) ||
-                               tglStr.startsWith(`${tahunStr}-${angkaBulanStr}`);
+                               tglStr.includes(` ${angkaBulanStr} `);
+
+            // Blokir total jika ada nama bulan lain yang jelas-jelas berbeda tercantum di string
+            if (selectedBulan !== '10' && tglStr.includes('okt') && !tglStr.includes('nov')) return false;
 
             return matchTahun && matchBulan;
           });
@@ -8518,4 +8533,3 @@ const Footer = () => {
     </footer>
   );
 };
-
